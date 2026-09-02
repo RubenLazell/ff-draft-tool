@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import type { RankedPlayer } from "@/lib/rankings";
 import { getDeltaBucket, DELTA_TEXT_CLASSES, formatDelta, getInjuryBadge } from "@/lib/playerDisplay";
@@ -43,16 +44,28 @@ export function CheatsheetView({
   players: RankedPlayer[];
   formatLabel: string;
 }) {
+  const [top200Only, setTop200Only] = useState(false);
+
   const positionCounters: Record<string, number> = {};
   const withRanks: DisplayPlayer[] = players.map((p, i) => {
     positionCounters[p.position] = (positionCounters[p.position] ?? 0) + 1;
     return { ...p, overallRank: i + 1, positionRank: positionCounters[p.position] };
   });
 
-  // Legend only lists positions actually present — if a position is
-  // filtered out upstream (e.g. K/DEF skipped on the cheat sheet), it
-  // shouldn't still show up in the color key.
-  const positionsPresent = POSITION_ORDER.filter((pos) => positionCounters[pos] > 0);
+  // Truncating just cuts the list rather than renumbering it — overallRank
+  // and positionRank stay anchored to the full board, so "top 200" always
+  // means the same 200 players regardless of this toggle.
+  const visibleRanks = top200Only ? withRanks.slice(0, 200) : withRanks;
+
+  // Legend only lists positions actually present in what's visible — if a
+  // position is filtered out upstream (e.g. K/DEF skipped on the cheat
+  // sheet) or truncated out by the top-200 cutoff, it shouldn't still show
+  // up in the color key.
+  const visiblePositionCounts: Record<string, number> = {};
+  for (const p of visibleRanks) {
+    visiblePositionCounts[p.position] = (visiblePositionCounts[p.position] ?? 0) + 1;
+  }
+  const positionsPresent = POSITION_ORDER.filter((pos) => visiblePositionCounts[pos] > 0);
 
   return (
     <div className="mx-auto max-w-4xl bg-zinc-50 px-4 py-8 dark:bg-black print:bg-white print:px-0 print:py-0">
@@ -73,19 +86,31 @@ export function CheatsheetView({
         >
           ← Back to rankings
         </Link>
-        <button
-          onClick={() => window.print()}
-          className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
-        >
-          Print
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTop200Only((v) => !v)}
+            className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+              top200Only
+                ? "border-transparent bg-foreground text-background"
+                : "border-black/[.08] text-black hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+            }`}
+          >
+            {top200Only ? "Top 200 only" : "Show all"}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background"
+          >
+            Print
+          </button>
+        </div>
       </div>
 
       <h1 className="mb-1 text-2xl font-bold text-black dark:text-zinc-50 print:mb-0.5 print:text-lg">
         Draft Cheat Sheet — {formatLabel}
       </h1>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400 print:hidden">
-        {players.length} players
+        {visibleRanks.length} players
       </p>
 
       <div className="mb-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-zinc-600 dark:text-zinc-400 print:mb-1">
@@ -97,7 +122,7 @@ export function CheatsheetView({
         ))}
       </div>
 
-      {chunk(withRanks, ROWS_PER_PAGE).map((pageRows, pageIndex, pages) => (
+      {chunk(visibleRanks, ROWS_PER_PAGE).map((pageRows, pageIndex, pages) => (
         <div
           key={pageIndex}
           className={`flex flex-col gap-1 print:gap-0 ${
