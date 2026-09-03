@@ -78,6 +78,32 @@ const INJURY_BADGES: Record<string, { label: string; className: string }> = {
   NA: { label: "NA", className: "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300" },
 };
 
+// Categorical color-by-position (identity, not polarity — unlike the
+// diverging ADP scale above) — fixed hue order, never reassigned. Shared
+// by the printable cheat sheet and the head-to-head comparison tool so
+// the same position always reads as the same color everywhere in the app.
+// Position text/label is always shown alongside it too, so color is never
+// the only signal.
+export const POSITION_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF"] as const;
+
+export const POSITION_COLORS: Record<
+  (typeof POSITION_ORDER)[number],
+  { bg: string; text: string; swatch: string }
+> = {
+  QB: { bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-400", swatch: "bg-blue-500" },
+  RB: { bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-700 dark:text-orange-400", swatch: "bg-orange-500" },
+  WR: { bg: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-700 dark:text-teal-400", swatch: "bg-teal-500" },
+  TE: { bg: "bg-yellow-50 dark:bg-yellow-950/40", text: "text-yellow-800 dark:text-yellow-400", swatch: "bg-yellow-500" },
+  K: { bg: "bg-pink-50 dark:bg-pink-950/40", text: "text-pink-700 dark:text-pink-400", swatch: "bg-pink-500" },
+  DEF: { bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-700 dark:text-green-400", swatch: "bg-green-500" },
+};
+
+export const FALLBACK_POSITION_COLOR = {
+  bg: "bg-zinc-50 dark:bg-zinc-900",
+  text: "text-zinc-700 dark:text-zinc-300",
+  swatch: "bg-zinc-400",
+};
+
 export function getInjuryBadge(status: string | null) {
   if (!status) return null;
   return (

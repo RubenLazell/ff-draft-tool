@@ -3,29 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { RankedPlayer } from "@/lib/rankings";
-import { getDeltaBucket, DELTA_TEXT_CLASSES, formatDelta, getInjuryBadge } from "@/lib/playerDisplay";
-
-// Categorical color-by-position, not by ADP delta (that's the interactive
-// board's scheme) — fixed hue order, never reassigned, same rule already
-// applied to this app's diverging ADP scale. Position text is always shown
-// too, so color is never the only signal — matters doubly here since some
-// people will print this in black & white.
-const POSITION_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF"] as const;
-
-const POSITION_COLORS: Record<(typeof POSITION_ORDER)[number], { bg: string; text: string; swatch: string }> = {
-  QB: { bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-400", swatch: "bg-blue-500" },
-  RB: { bg: "bg-orange-50 dark:bg-orange-950/40", text: "text-orange-700 dark:text-orange-400", swatch: "bg-orange-500" },
-  WR: { bg: "bg-teal-50 dark:bg-teal-950/40", text: "text-teal-700 dark:text-teal-400", swatch: "bg-teal-500" },
-  TE: { bg: "bg-yellow-50 dark:bg-yellow-950/40", text: "text-yellow-800 dark:text-yellow-400", swatch: "bg-yellow-500" },
-  K: { bg: "bg-pink-50 dark:bg-pink-950/40", text: "text-pink-700 dark:text-pink-400", swatch: "bg-pink-500" },
-  DEF: { bg: "bg-green-50 dark:bg-green-950/40", text: "text-green-700 dark:text-green-400", swatch: "bg-green-500" },
-};
-
-const FALLBACK_COLOR = {
-  bg: "bg-zinc-50 dark:bg-zinc-900",
-  text: "text-zinc-700 dark:text-zinc-300",
-  swatch: "bg-zinc-400",
-};
+import {
+  getDeltaBucket,
+  DELTA_TEXT_CLASSES,
+  formatDelta,
+  getInjuryBadge,
+  POSITION_ORDER,
+  POSITION_COLORS,
+  FALLBACK_POSITION_COLOR,
+} from "@/lib/playerDisplay";
 
 // 30 rows/page, forced via a hard page-break rather than relying on
 // whatever happens to fit — that's the only way to guarantee it exactly
@@ -161,7 +147,7 @@ function CheatsheetRow({ player }: { player: DisplayPlayer }) {
   const bucket = delta != null ? getDeltaBucket(delta) : "neutral";
   const injuryBadge = getInjuryBadge(player.injuryStatus);
   const posColor =
-    POSITION_COLORS[player.position as (typeof POSITION_ORDER)[number]] ?? FALLBACK_COLOR;
+    POSITION_COLORS[player.position as (typeof POSITION_ORDER)[number]] ?? FALLBACK_POSITION_COLOR;
 
   return (
     <div

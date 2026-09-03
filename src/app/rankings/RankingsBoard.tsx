@@ -329,6 +329,12 @@ export function RankingsBoard({
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/rankings/compare?format=${format}`}
+            className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+          >
+            Head-to-head
+          </Link>
           <button
             onClick={() => setShowCheatsheetPicker(true)}
             className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
