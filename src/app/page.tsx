@@ -69,6 +69,12 @@ export default async function Home() {
                 draft rooms, filtering out picks live as they happen so you
                 always know who&apos;s still available.
               </p>
+              <Link
+                href="/extension"
+                className="text-sm font-medium underline text-black dark:text-zinc-50"
+              >
+                Get the extension →
+              </Link>
             </div>
           </div>
         </div>
