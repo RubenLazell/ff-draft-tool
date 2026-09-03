@@ -29,6 +29,7 @@
 
   let rankings = [];
   let draftedNames = new Set();
+  let draftedIds = new Set();
   let settings = {
     format: "PPR",
     topOverall: DEFAULT_TOP_OVERALL,
@@ -52,10 +53,43 @@
   const adapter = location.hostname.includes("sleeper.com") ? SleeperAdapter : EspnAdapter;
   const findDraftBoardRoot = () => adapter.findDraftBoardRoot();
   const getDraftedPlayerNames = () => adapter.getDraftedPlayerNames();
+  // Optional — only Sleeper's legacy layout currently implements this
+  // (see adapters/sleeper.js). ESPN and Sleeper's beta layout rely on
+  // isPlayerDrafted()'s name-based matching alone.
+  const getDraftedPlayerIds = () => adapter.getDraftedPlayerIds?.() ?? new Set();
+  const isDraftPageActive = () => adapter.isDraftPageActive();
+
+  // Some layouts (Sleeper's legacy board) only show an abbreviated name
+  // like "B. Robinson" rather than "Bijan Robinson" — exact string
+  // equality would never match that against our rankings. Falls back to
+  // matching on first-initial + last name when the drafted text looks
+  // abbreviated. This can't fully rule out two different players sharing
+  // an initial and last name, but that's an ambiguity in the page's own
+  // abbreviated display, not something more DOM-scraping can resolve.
+  function isPlayerDrafted(fullName) {
+    const normalizedFull = normalizeName(fullName);
+    if (draftedNames.has(normalizedFull)) return true;
+
+    const fullParts = normalizedFull.split(" ");
+    if (fullParts.length < 2) return false;
+    const fullInitial = fullParts[0][0];
+    const fullLast = fullParts[fullParts.length - 1];
+
+    for (const drafted of draftedNames) {
+      const parts = drafted.split(" ");
+      if (parts.length < 2) continue;
+      const draftedInitial = parts[0];
+      const draftedLast = parts[parts.length - 1];
+      if (draftedInitial.length === 1 && draftedInitial === fullInitial && draftedLast === fullLast) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   function computeAvailable() {
     return rankings
-      .filter((p) => !draftedNames.has(normalizeName(p.fullName)))
+      .filter((p) => !draftedIds.has(p.playerId) && !isPlayerDrafted(p.fullName))
       .filter((p) => !hideKDef || (p.position !== "K" && p.position !== "DEF"));
   }
 
@@ -276,10 +310,13 @@
     }
 
     // Re-checked on every render (not just once at startup) so this stays
-    // accurate if ESPN's SPA routes the user into a draft without a full
-    // page reload, which wouldn't re-run this content script but would
-    // still trigger the MutationObserver watching document.body.
-    const inDraft = !!findDraftBoardRoot();
+    // accurate if the site's SPA routes the user into a draft without a
+    // full page reload, which wouldn't re-run this content script but
+    // would still trigger the MutationObserver watching document.body.
+    // Uses isDraftPageActive() rather than findDraftBoardRoot() —
+    // Sleeper's findDraftBoardRoot() always returns null (see its
+    // comment), which would make this notice permanently wrong there.
+    const inDraft = isDraftPageActive();
 
     content.innerHTML = `
       ${renderHeader(available.length)}
@@ -309,12 +346,23 @@
     if (observer) observer.disconnect();
     observer = new MutationObserver(() => {
       const names = getDraftedPlayerNames();
-      if (names.size !== draftedNames.size) {
+      const ids = getDraftedPlayerIds();
+      if (names.size !== draftedNames.size || ids.size !== draftedIds.size) {
         draftedNames = names;
+        draftedIds = ids;
         renderPanel();
       }
     });
-    observer.observe(root, { childList: true, subtree: true });
+    // attributes: true (not just childList) matters because a live-synced
+    // draft board can mark a pick as filled by toggling a class on an
+    // existing element instead of swapping in a new DOM node — childList
+    // alone would silently miss that.
+    observer.observe(root, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class"],
+    });
   }
 
   function init() {
@@ -346,6 +394,7 @@
 
           rankings = response.rankings;
           draftedNames = getDraftedPlayerNames();
+          draftedIds = getDraftedPlayerIds();
           renderPanel();
           startObserving();
         });

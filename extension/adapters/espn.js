@@ -8,6 +8,10 @@
 // so the last known state simply stops updating rather than showing
 // anything wrong).
 const EspnAdapter = {
+  isDraftPageActive() {
+    return !!document.querySelector(".draft-board-grid-pick-cell");
+  },
+
   findDraftBoardRoot() {
     const cell = document.querySelector(".draft-board-grid-pick-cell");
     return cell ? cell.parentElement : null;
