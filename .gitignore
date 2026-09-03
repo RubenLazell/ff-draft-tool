@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# packaged Chrome extension build, regenerate with PowerShell Compress-Archive
+/ff-draft-tool-extension.zip
