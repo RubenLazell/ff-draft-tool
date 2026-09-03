@@ -65,10 +65,101 @@
       panel = document.createElement("div");
       panel.id = PANEL_ID;
       panel.className = "fftool-panel";
+      // Only `.fftool-content` gets replaced by each render — the panel
+      // element itself, and its size/position, persist across re-renders
+      // (and across drags/resizes) since those only ever touch innerHTML.
+      panel.innerHTML = '<div class="fftool-content"></div>';
       document.body.appendChild(panel);
       panel.addEventListener("click", handlePanelClick);
+      panel.addEventListener("pointerdown", handlePanelPointerDown);
+      initPanelBox(panel);
     }
     return panel;
+  }
+
+  function getContentEl() {
+    return ensurePanel().querySelector(".fftool-content");
+  }
+
+  // Restores a saved position/size, or — if there's none yet — pins the
+  // CSS-default right-anchored position to an explicit `left` instead.
+  // That's needed purely so the native resize handle (bottom-right corner,
+  // from `resize: both` in content.css) grows the box towards the cursor:
+  // with `right` still set, growing `width` would keep the right edge
+  // fixed and push the left edge further left, which looks broken.
+  function initPanelBox(panel) {
+    chrome.storage.local.get("panelBox", ({ panelBox }) => {
+      if (panelBox) {
+        Object.assign(panel.style, panelBox, { right: "auto", bottom: "auto" });
+      } else {
+        const rect = panel.getBoundingClientRect();
+        panel.style.left = `${rect.left}px`;
+        panel.style.right = "auto";
+      }
+      // ResizeObserver always fires once immediately on observe(), before
+      // any real user resize — saving that passive callback would record
+      // an incomplete box (e.g. no explicit height yet) and, on the next
+      // load, permanently lose the adaptive top+bottom sizing that clears
+      // ESPN's chat bar. Only persist from genuine subsequent callbacks.
+      let skipFirstResizeCallback = true;
+      new ResizeObserver(() => {
+        if (skipFirstResizeCallback) {
+          skipFirstResizeCallback = false;
+          return;
+        }
+        savePanelBox(panel);
+      }).observe(panel);
+    });
+  }
+
+  function savePanelBox(panel) {
+    chrome.storage.local.set({
+      panelBox: {
+        left: panel.style.left,
+        top: panel.style.top,
+        width: panel.style.width,
+        height: panel.style.height,
+      },
+    });
+  }
+
+  function handlePanelPointerDown(e) {
+    if (e.target.closest(".fftool-header") && !e.target.closest("button")) {
+      beginDrag(e);
+    }
+  }
+
+  function beginDrag(e) {
+    e.preventDefault();
+    const panel = ensurePanel();
+    const rect = panel.getBoundingClientRect();
+    // Fix height and clear `bottom` too — otherwise, since `bottom` stays
+    // anchored while `top` moves during the drag, the box's height would
+    // keep changing to stay fitted between them instead of staying put.
+    panel.style.top = `${rect.top}px`;
+    panel.style.height = `${rect.height}px`;
+    panel.style.bottom = "auto";
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startLeft = rect.left;
+    const startTop = rect.top;
+    document.body.style.cursor = "grabbing";
+    document.body.style.userSelect = "none";
+
+    function onMove(moveEvent) {
+      panel.style.left = `${startLeft + (moveEvent.clientX - startX)}px`;
+      panel.style.top = `${startTop + (moveEvent.clientY - startY)}px`;
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      savePanelBox(panel);
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
   }
 
   function handlePanelClick(e) {
@@ -105,7 +196,7 @@
 
   function renderHeader(count) {
     return `
-      <div class="fftool-header">
+      <div class="fftool-header" title="Drag to move">
         <button class="fftool-collapse-toggle" aria-label="${collapsed ? "Expand" : "Collapse"}">
           ${collapsed ? "▸" : "▾"}
         </button>
@@ -117,8 +208,7 @@
   }
 
   function renderMessage(message) {
-    const panel = ensurePanel();
-    panel.innerHTML = `
+    getContentEl().innerHTML = `
       ${renderHeader(null)}
       <div class="fftool-error">${escapeHtml(message)}</div>
     `;
@@ -155,11 +245,11 @@
   }
 
   function renderPanel() {
-    const panel = ensurePanel();
+    const content = getContentEl();
     const available = computeAvailable();
 
     if (collapsed) {
-      panel.innerHTML = renderHeader(available.length);
+      content.innerHTML = renderHeader(available.length);
       return;
     }
 
@@ -185,7 +275,7 @@
     // still trigger the MutationObserver watching document.body.
     const inDraft = !!findDraftBoardRoot();
 
-    panel.innerHTML = `
+    content.innerHTML = `
       ${renderHeader(available.length)}
       ${
         inDraft

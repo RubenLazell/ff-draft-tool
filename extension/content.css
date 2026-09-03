@@ -1,10 +1,13 @@
-/* Positioned below ESPN's own sticky header (measured ~150px on the mock
-   draft lobby) rather than flush at the viewport top, since that's what
-   was clipping the panel's header and #1 row behind ESPN's nav. Anchored
-   to `bottom` as well (rather than a max-height guessed off 100vh) so it
-   also clears ESPN's fixed "Fantasy Chat" bar at the bottom-right —
-   setting both edges makes the browser size the box to fit between them,
-   scrolling internally instead of running under either one. */
+/* Default position: below ESPN's own sticky header (measured ~150px on
+   the mock draft lobby) rather than flush at the viewport top, and
+   anchored to `bottom` too so it also clears ESPN's fixed "Fantasy Chat"
+   bar — setting both edges sizes the box to fit between them by default.
+   Once dragged or resized, content.js switches this to explicit
+   left/top/width/height (persisted), so these are just the starting
+   values before the user ever touches it. `resize: both` gives a native
+   resize grip in the bottom-right corner — content.js pins `left` (see
+   initPanelBox) so growing the box tracks the cursor instead of growing
+   away from it. */
 .fftool-panel {
   position: fixed;
   top: 160px;
@@ -12,7 +15,10 @@
   bottom: 72px;
   z-index: 999999;
   width: 270px;
-  overflow-y: auto;
+  min-width: 200px;
+  min-height: 150px;
+  resize: both;
+  overflow: auto;
   background: #111827;
   color: #f3f4f6;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -35,6 +41,7 @@
   background: #111827;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px 12px 0 0;
+  cursor: grab;
 }
 
 .fftool-collapse-toggle {
