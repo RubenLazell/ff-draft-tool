@@ -344,14 +344,26 @@
   function startObserving() {
     const root = findDraftBoardRoot() || document.body;
     if (observer) observer.disconnect();
+
+    // Debounced rather than run on every single mutation record — with no
+    // narrower root available (Sleeper), this observes the whole page, and
+    // watching attributes too (see below) means near-continuous class
+    // churn elsewhere on a live/animating draft room can fire this many
+    // times a second. Each run re-scans the DOM and diffs sets; doing that
+    // at full frequency was heavy enough to make dragging feel broken —
+    // the drag code itself was fine, the page was just too busy to keep up.
+    let debounceTimer = null;
     observer = new MutationObserver(() => {
-      const names = getDraftedPlayerNames();
-      const ids = getDraftedPlayerIds();
-      if (names.size !== draftedNames.size || ids.size !== draftedIds.size) {
-        draftedNames = names;
-        draftedIds = ids;
-        renderPanel();
-      }
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        const names = getDraftedPlayerNames();
+        const ids = getDraftedPlayerIds();
+        if (names.size !== draftedNames.size || ids.size !== draftedIds.size) {
+          draftedNames = names;
+          draftedIds = ids;
+          renderPanel();
+        }
+      }, 200);
     });
     // attributes: true (not just childList) matters because a live-synced
     // draft board can mark a pick as filled by toggling a class on an
