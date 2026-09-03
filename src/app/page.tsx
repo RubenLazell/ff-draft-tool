@@ -18,13 +18,14 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-4 text-center dark:bg-black">
       {user ? (
-        <div className="flex flex-col items-center gap-6">
-          <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-            Welcome back, {user.email}
-          </h1>
-          <p className="max-w-md text-lg text-zinc-600 dark:text-zinc-400">
-            You&apos;re logged in. The ESPN draft extension is coming soon.
-          </p>
+        <div className="flex w-full max-w-2xl flex-col items-center gap-8">
+          <div className="flex flex-col items-center gap-1">
+            <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
+              Welcome back
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">{user.email}</p>
+          </div>
+
           <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
             <Link
               href="/rankings"
@@ -41,17 +42,34 @@ export default async function Home() {
               </button>
             </form>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <AiInsightsToggle
-              enabled={aiInsightsEnabled}
-              disabled={!isAuthorizedForAiInsights}
-              disabledReason="not-authorized"
-            />
-            <p className="max-w-xs text-xs text-zinc-500 dark:text-zinc-400">
-              Turns on the AI-generated strength/concern and injury research on
-              player cards in your rankings — off by default since each one
-              costs a small amount to generate.
-            </p>
+
+          <div className="grid w-full gap-4 text-left sm:grid-cols-2">
+            <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                AI Insights
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                AI-generated strength/concern and injury research on player
+                cards in your rankings — off by default since each one costs
+                a small amount to generate.
+              </p>
+              <AiInsightsToggle
+                enabled={aiInsightsEnabled}
+                disabled={!isAuthorizedForAiInsights}
+                disabledReason="not-authorized"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Live Draft Assistant
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                A Chrome extension overlays your rankings on ESPN and Sleeper
+                draft rooms, filtering out picks live as they happen so you
+                always know who&apos;s still available.
+              </p>
+            </div>
           </div>
         </div>
       ) : (
