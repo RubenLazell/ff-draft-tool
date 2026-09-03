@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -163,8 +164,15 @@ export function RankingsBoard({
     setPanel(null);
   }
 
+  // Split by input type instead of one PointerSensor for both: on a mouse, a
+  // small drag distance safely means "start reordering" since there's no
+  // competing gesture. On touch, the same threshold fires on every ordinary
+  // scroll swipe too — indistinguishable from a drag until it's already
+  // hijacked the page. TouchSensor's delay instead requires a brief
+  // press-and-hold before a drag engages, so a normal swipe just scrolls.
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -415,6 +423,10 @@ export function RankingsBoard({
         ))}
       </div>
 
+      <p className="mb-2 text-xs text-zinc-500 sm:hidden dark:text-zinc-400">
+        Tip: press and hold a row to drag it — a quick swipe just scrolls.
+      </p>
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -523,7 +535,11 @@ function SortableRow({
     <div
       ref={setNodeRef}
       className="h-full"
-      style={{ touchAction: "none" }}
+      // "none" would block the browser's own vertical scrolling on every
+      // touch, not just ones that turn into a drag — "pan-y" leaves normal
+      // scrolling alone and TouchSensor's hold-delay (above) is what claims
+      // the gesture once a drag actually starts.
+      style={{ touchAction: "pan-y" }}
       {...attributes}
       {...listeners}
     >
