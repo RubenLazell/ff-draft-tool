@@ -81,6 +81,23 @@
     return ensurePanel().querySelector(".fftool-content");
   }
 
+  // A dragged-up panel must never get closer to the top than this — it's
+  // the same 160px the CSS default uses to clear ESPN/Sleeper's own fixed
+  // header. Without this floor, dragging the panel up even slightly slides
+  // its own header behind the site's header: invisible, and thus
+  // impossible to grab to drag back down — which is exactly the bug this
+  // fixes, both live while dragging and by self-correcting a bad value
+  // already saved from before this existed.
+  const MIN_TOP = 160;
+  const EDGE_MARGIN = 60; // keep at least this much on-screen horizontally/at the bottom
+
+  function clampPosition(left, top, width) {
+    return {
+      left: Math.min(Math.max(left, EDGE_MARGIN - width), window.innerWidth - EDGE_MARGIN),
+      top: Math.min(Math.max(top, MIN_TOP), window.innerHeight - EDGE_MARGIN),
+    };
+  }
+
   // Restores a saved position/size, or — if there's none yet — pins the
   // CSS-default right-anchored position to an explicit `left` instead.
   // That's needed purely so the native resize handle (bottom-right corner,
@@ -91,6 +108,10 @@
     chrome.storage.local.get("panelBox", ({ panelBox }) => {
       if (panelBox) {
         Object.assign(panel.style, panelBox, { right: "auto", bottom: "auto" });
+        const rect = panel.getBoundingClientRect();
+        const clamped = clampPosition(rect.left, rect.top, rect.width);
+        panel.style.left = `${clamped.left}px`;
+        panel.style.top = `${clamped.top}px`;
       } else {
         const rect = panel.getBoundingClientRect();
         panel.style.left = `${rect.left}px`;
@@ -148,8 +169,11 @@
     document.body.style.userSelect = "none";
 
     function onMove(moveEvent) {
-      panel.style.left = `${startLeft + (moveEvent.clientX - startX)}px`;
-      panel.style.top = `${startTop + (moveEvent.clientY - startY)}px`;
+      const rawLeft = startLeft + (moveEvent.clientX - startX);
+      const rawTop = startTop + (moveEvent.clientY - startY);
+      const clamped = clampPosition(rawLeft, rawTop, rect.width);
+      panel.style.left = `${clamped.left}px`;
+      panel.style.top = `${clamped.top}px`;
     }
     function onUp() {
       document.removeEventListener("pointermove", onMove);
