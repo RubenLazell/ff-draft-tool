@@ -49,26 +49,29 @@
   }
 
   // --- ESPN DOM adapter -----------------------------------------------
-  // PLACEHOLDER selectors — not verified against a live ESPN draft page.
-  // ESPN's markup is private/unversioned, so these are a best guess based
-  // on typical naming, not a confirmed fact. If they don't match, the
-  // panel below shows an explicit "couldn't read the draft board" state
-  // instead of silently displaying wrong data. Test against
-  // fantasy.espn.com/football/mockdraftlobby (no live draft needed) and
-  // fix these two functions against the real DOM.
+  // Verified against a live ESPN mock draft's "Board" tab: each pick is a
+  // `.draft-board-grid-pick-cell`, carrying `.completedPick` once filled
+  // (vs. `.upcomingPick` beforehand) with `.playerFirstName` /
+  // `.playerLastName` spans inside. This is specific to the Board tab —
+  // switching to the "Players" or "Pick History" tab may remove these
+  // cells from the DOM, which would just make getDraftedPlayerNames()
+  // return an empty set (nothing newly "undrafted", so the last known
+  // state simply stops updating rather than showing anything wrong).
   function findDraftBoardRoot() {
-    return (
-      document.querySelector("[class*='DraftBoard']") ||
-      document.querySelector("[class*='draftBoard']") ||
-      null
-    );
+    const cell = document.querySelector(".draft-board-grid-pick-cell");
+    return cell ? cell.parentElement : null;
   }
 
   function getDraftedPlayerNames() {
-    const nodes = document.querySelectorAll(
-      ".playerinfo__playername.drafted, [class*='drafted'] .playerinfo__playername, .player--drafted .player-name"
-    );
-    return new Set(Array.from(nodes).map((el) => normalizeName(el.textContent)));
+    const cells = document.querySelectorAll(".draft-board-grid-pick-cell.completedPick");
+    const names = [];
+    for (const cell of cells) {
+      const first = cell.querySelector(".playerFirstName")?.textContent ?? "";
+      const last = cell.querySelector(".playerLastName")?.textContent ?? "";
+      const full = `${first} ${last}`.trim();
+      if (full) names.push(normalizeName(full));
+    }
+    return new Set(names);
   }
   // ----------------------------------------------------------------------
 
