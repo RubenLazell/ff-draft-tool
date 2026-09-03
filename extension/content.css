@@ -17,6 +17,14 @@
   width: 270px;
   min-width: 200px;
   min-height: 150px;
+  /* Caps how tall/wide the native resize grip (and any restored saved
+     size) can make the box — without this, resizing past the viewport's
+     own height just made the box that tall with nothing to scroll,
+     since overflow:auto only activates once *content* exceeds the box,
+     not once the box exceeds the screen. This keeps a scrollbar as the
+     fallback instead of the box running off-screen. */
+  max-height: calc(100vh - 20px);
+  max-width: calc(100vw - 20px);
   resize: both;
   overflow: auto;
   background: #111827;

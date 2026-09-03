@@ -81,45 +81,22 @@
     return ensurePanel().querySelector(".fftool-content");
   }
 
-  // A dragged-up panel must never get closer to the top than this — it's
-  // the same 160px the CSS default uses to clear ESPN/Sleeper's own fixed
-  // header. Without this floor, dragging the panel up even slightly slides
-  // its own header behind the site's header: invisible, and thus
-  // impossible to grab to drag back down — which is exactly the bug this
-  // fixes, both live while dragging and by self-correcting a bad value
-  // already saved from before this existed.
-  const MIN_TOP = 160;
-
-  // Keeps the whole box on-screen — including its bottom-right corner,
-  // where the native resize grip lives. The previous version only bounded
-  // `top`/`left` with a fixed margin, which still let `left + width` or
-  // `top + height` run off the visible viewport (further right/down than
-  // the screen, or literally past the browser window into the OS taskbar
-  // area) — putting the resize handle out of reach. Bounding by the
-  // panel's actual width/height instead guarantees the corner stays put.
-  function clampPosition(left, top, width, height) {
-    const maxLeft = Math.max(0, window.innerWidth - width);
-    const maxTop = Math.max(MIN_TOP, window.innerHeight - height);
-    return {
-      left: Math.min(Math.max(left, 0), maxLeft),
-      top: Math.min(Math.max(top, MIN_TOP), maxTop),
-    };
-  }
-
   // Restores a saved position/size, or — if there's none yet — pins the
   // CSS-default right-anchored position to an explicit `left` instead.
   // That's needed purely so the native resize handle (bottom-right corner,
   // from `resize: both` in content.css) grows the box towards the cursor:
   // with `right` still set, growing `width` would keep the right edge
   // fixed and push the left edge further left, which looks broken.
+  //
+  // Position is intentionally unclamped — dragging is free to place the
+  // panel anywhere, including behind a site's own header if you park it
+  // there; drag it back out yourself rather than the tool refusing to let
+  // you go there. max-height/max-width in content.css (not position) is
+  // what keeps the box itself from growing past the viewport.
   function initPanelBox(panel) {
     chrome.storage.local.get("panelBox", ({ panelBox }) => {
       if (panelBox) {
         Object.assign(panel.style, panelBox, { right: "auto", bottom: "auto" });
-        const rect = panel.getBoundingClientRect();
-        const clamped = clampPosition(rect.left, rect.top, rect.width, rect.height);
-        panel.style.left = `${clamped.left}px`;
-        panel.style.top = `${clamped.top}px`;
       } else {
         const rect = panel.getBoundingClientRect();
         panel.style.left = `${rect.left}px`;
@@ -177,11 +154,8 @@
     document.body.style.userSelect = "none";
 
     function onMove(moveEvent) {
-      const rawLeft = startLeft + (moveEvent.clientX - startX);
-      const rawTop = startTop + (moveEvent.clientY - startY);
-      const clamped = clampPosition(rawLeft, rawTop, rect.width, rect.height);
-      panel.style.left = `${clamped.left}px`;
-      panel.style.top = `${clamped.top}px`;
+      panel.style.left = `${startLeft + (moveEvent.clientX - startX)}px`;
+      panel.style.top = `${startTop + (moveEvent.clientY - startY)}px`;
     }
     function onUp() {
       document.removeEventListener("pointermove", onMove);
