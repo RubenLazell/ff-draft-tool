@@ -74,7 +74,13 @@ function shapeRankings(rows, format) {
         byeWeek: player?.bye_week ?? null,
       };
     })
-    .sort((a, b) => a.rank - b.rank);
+    .sort((a, b) => a.rank - b.rank)
+    // The stored `rank` is fractional (drag-and-drop reorders by computing
+    // midpoints between neighbors rather than renumbering everything) — the
+    // web app never displays that raw value, only each player's position in
+    // the sorted list. Replacing it with a clean sequential integer here
+    // matches that, instead of showing e.g. "#52.5" or "#24.484375".
+    .map((p, i) => ({ ...p, rank: i + 1 }));
 }
 
 async function fetchRankings(format) {

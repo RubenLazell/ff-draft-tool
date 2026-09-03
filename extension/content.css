@@ -1,15 +1,17 @@
 /* Positioned below ESPN's own sticky header (measured ~150px on the mock
    draft lobby) rather than flush at the viewport top, since that's what
-   was clipping the panel's header and #1 row behind ESPN's nav. Height is
-   capped to match, so the panel never runs past the bottom of the screen
-   either — it scrolls internally instead. */
+   was clipping the panel's header and #1 row behind ESPN's nav. Anchored
+   to `bottom` as well (rather than a max-height guessed off 100vh) so it
+   also clears ESPN's fixed "Fantasy Chat" bar at the bottom-right —
+   setting both edges makes the browser size the box to fit between them,
+   scrolling internally instead of running under either one. */
 .fftool-panel {
   position: fixed;
   top: 160px;
   right: 12px;
+  bottom: 72px;
   z-index: 999999;
   width: 270px;
-  max-height: calc(100vh - 180px);
   overflow-y: auto;
   background: #111827;
   color: #f3f4f6;
