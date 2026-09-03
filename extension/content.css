@@ -47,6 +47,21 @@
   flex-shrink: 0;
 }
 
+.fftool-collapse-toggle:hover,
+.fftool-hide-toggle:hover {
+  color: #f3f4f6;
+}
+
+.fftool-hide-toggle {
+  all: unset;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
 .fftool-collapse-toggle:hover {
   color: #f3f4f6;
 }

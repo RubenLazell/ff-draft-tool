@@ -53,6 +53,16 @@ document.getElementById("loginBtn").addEventListener("click", async () => {
   await refreshView();
 });
 
+document.getElementById("showPanelBtn").addEventListener("click", async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return;
+  chrome.tabs.sendMessage(tab.id, { type: "SHOW_PANEL" }, () => {
+    // No content script on this tab (not an ESPN fantasy page) — nothing
+    // to do, but read lastError so Chrome doesn't log an unchecked error.
+    void chrome.runtime.lastError;
+  });
+});
+
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "LOGOUT" });
   await refreshView();

@@ -94,6 +94,14 @@
   }
 
   function handlePanelClick(e) {
+    if (e.target.closest(".fftool-hide-toggle")) {
+      // Just a CSS toggle, not a state variable — future renderPanel()
+      // calls only replace innerHTML, which leaves style.display alone,
+      // so this stays hidden across draft-pick updates until explicitly
+      // shown again from the popup.
+      ensurePanel().style.display = "none";
+      return;
+    }
     if (e.target.closest(".fftool-collapse-toggle")) {
       collapsed = !collapsed;
       renderPanel();
@@ -125,6 +133,7 @@
         </button>
         <span class="fftool-title">FF Draft Tool</span>
         ${count != null ? `<span class="fftool-count">${count} left</span>` : ""}
+        <button class="fftool-hide-toggle" aria-label="Hide panel" title="Hide panel — bring it back from the extension popup">×</button>
       </div>
     `;
   }
@@ -209,6 +218,13 @@
       ${sections.join("")}
     `;
   }
+
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.type === "SHOW_PANEL") {
+      const panel = document.getElementById(PANEL_ID);
+      if (panel) panel.style.display = "";
+    }
+  });
 
   function startObserving() {
     const root = findDraftBoardRoot() || document.body;
