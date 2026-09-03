@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Plain-JS Chrome extension (chrome.* globals, no build step) — not
+    // part of the Next.js app's lint scope.
+    "extension/**",
   ]),
 ]);
 

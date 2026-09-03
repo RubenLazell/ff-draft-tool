@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "FF Draft Tool — ESPN Draft Assistant",
+  "version": "0.1.0",
+  "description": "Shows your next-best available players by rank and position while drafting live on ESPN Fantasy Football.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://oyfaaevlfhpklpqltbhr.supabase.co/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://fantasy.espn.com/football/draft*",
+        "https://fantasy.espn.com/football/mockdraftlobby*"
+      ],
+      "js": ["config.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FF Draft Tool"
+  }
+}
