@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "FF Draft Tool — ESPN Draft Assistant",
-  "version": "0.1.0",
-  "description": "Shows your next-best available players by rank and position while drafting live on ESPN Fantasy Football.",
+  "name": "FF Draft Tool — Live Draft Assistant",
+  "version": "0.2.0",
+  "description": "Shows your next-best available players by rank and position while drafting live on ESPN or Sleeper Fantasy Football.",
   "permissions": ["storage"],
   "host_permissions": ["https://oyfaaevlfhpklpqltbhr.supabase.co/*"],
   "background": {
@@ -10,8 +10,8 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://fantasy.espn.com/football*"],
-      "js": ["config.js", "content.js"],
+      "matches": ["https://fantasy.espn.com/football*", "https://sleeper.com/draft/nfl/*"],
+      "js": ["config.js", "adapters/espn.js", "adapters/sleeper.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }

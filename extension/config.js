@@ -23,3 +23,16 @@ const POSITION_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF"];
 
 const DEFAULT_TOP_OVERALL = 15;
 const DEFAULT_TOP_PER_POSITION = 5;
+
+// Shared by content.js and every site adapter (adapters/*.js) for matching
+// a drafted-player name from the page against a fullName from our data —
+// moved here rather than duplicated per-adapter since it's not site-specific.
+function normalizeName(name) {
+  return (name || "")
+    .toLowerCase()
+    .replace(/[.'-]/g, "")
+    .replace(/\b(jr|sr|ii|iii|iv)\b/g, "")
+    .replace(/[^a-z ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
