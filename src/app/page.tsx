@@ -18,7 +18,7 @@ export default async function Home() {
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-4 text-center dark:bg-black">
       {user ? (
-        <div className="flex w-full max-w-2xl flex-col items-center gap-8">
+        <div className="flex w-full max-w-3xl flex-col items-center gap-8">
           <div className="flex flex-col items-center gap-1">
             <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
               Welcome back
@@ -43,7 +43,7 @@ export default async function Home() {
             </form>
           </div>
 
-          <div className="grid w-full gap-4 text-left sm:grid-cols-2">
+          <div className="grid w-full gap-4 text-left sm:grid-cols-2 lg:grid-cols-3">
             <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 AI Insights
@@ -74,6 +74,24 @@ export default async function Home() {
                 className="text-sm font-medium underline text-black dark:text-zinc-50"
               >
                 Get the extension →
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Head-to-Head
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Refine your rankings two players at a time — pick who you&apos;d
+                rather draft between neighbors in your top 150, and your
+                board reorders automatically whenever your pick disagrees
+                with it.
+              </p>
+              <Link
+                href="/rankings/compare"
+                className="text-sm font-medium underline text-black dark:text-zinc-50"
+              >
+                Start comparing →
               </Link>
             </div>
           </div>
