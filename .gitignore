@@ -42,3 +42,8 @@ next-env.d.ts
 
 # packaged Chrome extension build, regenerate with PowerShell Compress-Archive
 /ff-draft-tool-extension.zip
+
+# Chrome Web Store screenshots — contain personal info (email, league name)
+/Screenshot*.png
+/screenshot*.png
+/store-screenshot-*.png
