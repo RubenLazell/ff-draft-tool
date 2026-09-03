@@ -387,7 +387,9 @@ export function RankingsBoard({
                   onClick={() => handleSelectSearchResult(p)}
                   className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-black/[.04] dark:hover:bg-white/10"
                 >
-                  <span className="font-medium text-black dark:text-zinc-50">{p.fullName}</span>
+                  <span className="min-w-0 truncate font-medium text-black dark:text-zinc-50">
+                    {p.fullName}
+                  </span>
                   <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
                     #{p.overallRank} · {p.position}
                     {p.positionRank} · {p.team ?? "FA"}
@@ -556,7 +558,7 @@ function RowContent({
 
   return (
     <div
-      className={`flex h-full cursor-grab items-center gap-3 border-b border-black/[.08] px-4 transition-shadow active:cursor-grabbing dark:border-white/[.145] ${DELTA_ROW_CLASSES[bucket]} ${
+      className={`flex h-full cursor-grab items-center gap-1.5 border-b border-black/[.08] px-2 transition-shadow active:cursor-grabbing sm:gap-3 sm:px-4 dark:border-white/[.145] ${DELTA_ROW_CLASSES[bucket]} ${
         dragging ? "opacity-50" : ""
       } ${highlighted ? "ring-2 ring-inset ring-blue-500" : ""}`}
     >
@@ -566,12 +568,12 @@ function RowContent({
           onSubmit={(newRank) => onSetRank(player.playerId, newRank)}
         />
       ) : (
-        <span className="w-14 shrink-0 text-sm font-medium text-zinc-400 dark:text-zinc-500">
+        <span className="w-9 shrink-0 text-xs font-medium text-zinc-400 sm:w-14 sm:text-sm dark:text-zinc-500">
           #{player.overallRank}
         </span>
       )}
-      <span className="flex flex-1 items-center gap-2 font-medium text-black dark:text-zinc-50">
-        {player.fullName}
+      <span className="flex min-w-0 flex-1 items-center gap-1.5 font-medium text-black dark:text-zinc-50">
+        <span className="truncate">{player.fullName}</span>
         {injuryBadge && (
           <button
             type="button"
@@ -580,23 +582,24 @@ function RowContent({
               e.stopPropagation();
               onToggleDetails?.(player.playerId, e.currentTarget.getBoundingClientRect());
             }}
-            className={`rounded px-1.5 py-0.5 text-xs font-bold ${injuryBadge.className}`}
+            className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold ${injuryBadge.className}`}
             title={`${player.injuryStatus} — click for injury outlook`}
           >
             {injuryBadge.label}
           </button>
         )}
       </span>
-      <span className="flex shrink-0 items-center gap-1.5 text-sm text-zinc-500 dark:text-zinc-400">
+      <span className="flex shrink-0 items-center gap-1 text-xs text-zinc-500 sm:gap-1.5 sm:text-sm dark:text-zinc-400">
         {player.position}
-        {player.positionRank} · {player.team ?? "FA"}
+        {player.positionRank}
+        <span className="hidden sm:inline">· {player.team ?? "FA"}</span>
         {player.consensusRank != null && delta != null && (
-          <>
+          <span className="hidden items-center gap-1.5 sm:inline-flex">
             <span>· ADP {player.consensusRank.toFixed(1)}</span>
             <span className={`font-semibold tabular-nums ${DELTA_TEXT_CLASSES[bucket]}`}>
               {formatDelta(delta)}
             </span>
-          </>
+          </span>
         )}
       </span>
       {onToggleDetails && (
@@ -630,6 +633,7 @@ function RankCell({
 }) {
   const [editing, setEditing] = useState(false);
   const cancelRef = useRef(false);
+  const lastTapRef = useRef(0);
 
   if (editing) {
     return (
@@ -658,20 +662,29 @@ function RankCell({
           const next = parseInt(e.currentTarget.value, 10);
           if (!Number.isNaN(next) && next !== overallRank) onSubmit(next);
         }}
-        className="w-14 shrink-0 rounded border border-black/20 bg-white px-1 py-0.5 text-sm font-medium text-black dark:border-white/20 dark:bg-zinc-900 dark:text-zinc-50"
+        className="w-9 shrink-0 rounded border border-black/20 bg-white px-1 py-0.5 text-xs font-medium text-black sm:w-14 sm:text-sm dark:border-white/20 dark:bg-zinc-900 dark:text-zinc-50"
       />
     );
   }
 
   return (
     <span
-      className="w-14 shrink-0 cursor-text text-sm font-medium text-zinc-400 dark:text-zinc-500"
+      className="w-9 shrink-0 cursor-text text-xs font-medium text-zinc-400 sm:w-14 sm:text-sm dark:text-zinc-500"
       onPointerDown={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => {
+      onClick={(e) => {
+        // Native dblclick isn't reliable on touch, so double-tap/double-click
+        // is detected manually here — a second click/tap within 400ms of the
+        // first (from either a mouse or a finger) opens the input.
         e.stopPropagation();
-        setEditing(true);
+        const now = Date.now();
+        if (now - lastTapRef.current < 400) {
+          lastTapRef.current = 0;
+          setEditing(true);
+        } else {
+          lastTapRef.current = now;
+        }
       }}
-      title="Double-click to jump to a rank"
+      title="Double-click (or double-tap) to jump to a rank"
     >
       #{overallRank}
     </span>
@@ -709,7 +722,10 @@ function PlayerDetailsPanel({
   const spaceAbove = rect.top - GAP - MARGIN;
   const showAbove = spaceBelow < spaceAbove;
   const maxHeight = Math.max(120, showAbove ? spaceAbove : spaceBelow);
-  const left = Math.min(Math.max(rect.right - PANEL_WIDTH, MARGIN), window.innerWidth - PANEL_WIDTH - MARGIN);
+  // Capped to the viewport width too — on a narrow phone the fixed 320px
+  // panel would otherwise overflow off the screen edge.
+  const panelWidth = Math.min(PANEL_WIDTH, window.innerWidth - MARGIN * 2);
+  const left = Math.min(Math.max(rect.right - panelWidth, MARGIN), window.innerWidth - panelWidth - MARGIN);
 
   return createPortal(
     <>
@@ -719,7 +735,7 @@ function PlayerDetailsPanel({
           position: "fixed",
           top: showAbove ? rect.top - GAP : rect.bottom + GAP,
           left,
-          width: PANEL_WIDTH,
+          width: panelWidth,
           maxHeight,
           transform: showAbove ? "translateY(-100%)" : undefined,
           zIndex: 50,

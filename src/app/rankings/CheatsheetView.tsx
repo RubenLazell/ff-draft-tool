@@ -68,7 +68,7 @@ export function CheatsheetView({
   const positionsPresent = POSITION_ORDER.filter((pos) => visiblePositionCounts[pos] > 0);
 
   return (
-    <div className="mx-auto max-w-4xl bg-zinc-50 px-4 py-8 dark:bg-black print:bg-white print:px-0 print:py-0">
+    <div className="mx-auto max-w-4xl bg-zinc-50 px-3 py-4 sm:px-4 sm:py-8 dark:bg-black print:bg-white print:px-0 print:py-0">
       {/* Most browsers strip background colors by default when printing.
           This forces the position-color tints to actually appear in the
           printout instead of silently rendering as plain white rows. */}
@@ -79,7 +79,7 @@ export function CheatsheetView({
         }
       `}</style>
 
-      <div className="mb-4 flex items-center justify-between print:hidden">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Link
           href="/rankings"
           className="text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
@@ -122,18 +122,27 @@ export function CheatsheetView({
         ))}
       </div>
 
-      {chunk(visibleRanks, ROWS_PER_PAGE).map((pageRows, pageIndex, pages) => (
-        <div
-          key={pageIndex}
-          className={`flex flex-col gap-1 print:gap-0 ${
-            pageIndex < pages.length - 1 ? "print:break-after-page" : ""
-          }`}
-        >
-          {pageRows.map((player) => (
-            <CheatsheetRow key={player.playerId} player={player} />
+      {/* This layout is print-first (fixed-width columns sized for a
+          letter-size page), so on a narrow phone screen it scrolls
+          horizontally instead of crushing columns illegibly. Printing
+          always uses the page's physical width regardless of viewport, so
+          the scroll wrapper is disabled for print rather than affecting it. */}
+      <div className="overflow-x-auto print:overflow-visible">
+        <div className="min-w-[560px] print:min-w-0">
+          {chunk(visibleRanks, ROWS_PER_PAGE).map((pageRows, pageIndex, pages) => (
+            <div
+              key={pageIndex}
+              className={`flex flex-col gap-1 print:gap-0 ${
+                pageIndex < pages.length - 1 ? "print:break-after-page" : ""
+              }`}
+            >
+              {pageRows.map((player) => (
+                <CheatsheetRow key={player.playerId} player={player} />
+              ))}
+            </div>
           ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
