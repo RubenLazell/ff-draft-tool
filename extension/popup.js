@@ -63,6 +63,14 @@ document.getElementById("showPanelBtn").addEventListener("click", async () => {
   });
 });
 
+document.getElementById("resetPositionBtn").addEventListener("click", async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return;
+  chrome.tabs.sendMessage(tab.id, { type: "RESET_PANEL_POSITION" }, () => {
+    void chrome.runtime.lastError;
+  });
+});
+
 document.getElementById("logoutBtn").addEventListener("click", async () => {
   await chrome.runtime.sendMessage({ type: "LOGOUT" });
   await refreshView();

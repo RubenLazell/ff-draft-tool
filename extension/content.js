@@ -339,6 +339,21 @@
       const panel = document.getElementById(PANEL_ID);
       if (panel) panel.style.display = "";
     }
+    if (message?.type === "RESET_PANEL_POSITION") {
+      // Dragging is intentionally unrestricted (see initPanelBox), which
+      // means it can end up stuck somewhere unreachable with no way back
+      // except this — clear the saved box and the live inline styles so
+      // it snaps back to content.css's default position/size immediately,
+      // without needing a page reload.
+      chrome.storage.local.remove("panelBox");
+      const panel = document.getElementById(PANEL_ID);
+      if (panel) {
+        for (const prop of ["left", "top", "right", "bottom", "width", "height"]) {
+          panel.style.removeProperty(prop);
+        }
+        panel.style.display = "";
+      }
+    }
   });
 
   function startObserving() {
