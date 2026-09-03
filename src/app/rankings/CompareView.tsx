@@ -26,6 +26,19 @@ const POOL_SIZE = 150;
 
 type DisplayPlayer = RankedPlayer & { overallRank: number; positionRank: number };
 
+// A well-mixed 32-bit integer hash (lowbias32, Chris Wellons' "hash
+// prospector") — a 1-bit change in the input flips roughly half the output
+// bits, so `hashSeed(n) % L` scatters well for any L, unlike a plain
+// `n * constant` step which can degenerate to a small, near-sequential
+// stride for many values of L.
+function hashSeed(n: number): number {
+  let x = n;
+  x = Math.imul(x ^ (x >>> 16), 0x21f0aaad);
+  x = Math.imul(x ^ (x >>> 15), 0x735a2d97);
+  x = x ^ (x >>> 15);
+  return x >>> 0;
+}
+
 export function CompareView({
   initialRankings,
   format,
@@ -87,12 +100,17 @@ export function CompareView({
   // too, but bumping dealSeed either way keeps "deal a new pair after every
   // decision" simple and consistent instead of relying on that side effect.
   // Deliberately not Math.random() — this needs to run inside a pure
-  // useMemo, so it's a plain multiplicative hash of the incrementing seed
-  // instead: same (pairs, dealSeed) always yields the same pick, but
-  // consecutive seeds land on well-spread, "random enough" indices.
+  // useMemo, so it's hashSeed()'d instead: same (pairs, dealSeed) always
+  // yields the same pick, but the hash's full bit-avalanche means
+  // consecutive seeds land on genuinely scattered indices (a plain
+  // `dealSeed * constant` step, tried first, degenerates for many pool
+  // sizes — e.g. mod 20 it walks by 1 each time, which just feels
+  // sequential, not random).
   const currentPair = useMemo(() => {
     if (pairs.length === 0) return null;
-    const index = (dealSeed * 2654435761) % pairs.length;
+    // +1 avoids hashSeed(0) === 0, which would otherwise make the very
+    // first pair shown always the same deterministic starting point.
+    const index = hashSeed(dealSeed + 1) % pairs.length;
     return pairs[index];
   }, [pairs, dealSeed]);
 
