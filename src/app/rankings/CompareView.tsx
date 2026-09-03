@@ -41,6 +41,7 @@ export function CompareView({
   const [scope, setScope] = useState<Scope>("OVERALL");
   const [dealSeed, setDealSeed] = useState(0);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<"unchanged" | "updated" | null>(null);
   const [comparisons, setComparisons] = useState(0);
   const [, startTransition] = useTransition();
 
@@ -104,6 +105,7 @@ export function CompareView({
     // contradicts the existing order, so swap them. If they picked the one
     // already ranked higher, the board already agrees — nothing to change.
     if (picked.rank > other.rank) {
+      setFeedback("updated");
       const previousPlayers = players;
       const nextPlayers = players
         .map((p) => {
@@ -118,12 +120,15 @@ export function CompareView({
         const result = await swapRanks(picked.playerId, picked.rank, other.playerId, other.rank, format);
         if (result.error) setPlayers(previousPlayers);
       });
+    } else {
+      setFeedback("unchanged");
     }
 
     setTimeout(() => {
       setPickedId(null);
+      setFeedback(null);
       setDealSeed((s) => s + 1);
-    }, 220);
+    }, 900);
   }
 
   return (
@@ -185,23 +190,44 @@ export function CompareView({
         </div>
 
         {currentPair ? (
-          <div className="grid w-full grid-cols-1 items-stretch gap-4 sm:grid-cols-[1fr_auto_1fr]">
-            <PlayerCard
-              player={currentPair[0]}
-              picked={pickedId === currentPair[0].playerId}
-              dimmed={pickedId != null && pickedId !== currentPair[0].playerId}
-              onPick={() => handlePick(currentPair![0], currentPair![1])}
-            />
-            <div className="flex items-center justify-center text-sm font-semibold text-zinc-400 dark:text-zinc-600">
-              VS
+          <>
+            <div className="grid w-full grid-cols-1 items-stretch gap-4 sm:grid-cols-[1fr_auto_1fr]">
+              <PlayerCard
+                player={currentPair[0]}
+                picked={pickedId === currentPair[0].playerId}
+                dimmed={pickedId != null && pickedId !== currentPair[0].playerId}
+                onPick={() => handlePick(currentPair![0], currentPair![1])}
+              />
+              <div className="flex items-center justify-center text-sm font-semibold text-zinc-400 dark:text-zinc-600">
+                VS
+              </div>
+              <PlayerCard
+                player={currentPair[1]}
+                picked={pickedId === currentPair[1].playerId}
+                dimmed={pickedId != null && pickedId !== currentPair[1].playerId}
+                onPick={() => handlePick(currentPair![1], currentPair![0])}
+              />
             </div>
-            <PlayerCard
-              player={currentPair[1]}
-              picked={pickedId === currentPair[1].playerId}
-              dimmed={pickedId != null && pickedId !== currentPair[1].playerId}
-              onPick={() => handlePick(currentPair![1], currentPair![0])}
-            />
-          </div>
+
+            {/* Reserved height + opacity transition rather than
+                mounting/unmounting, so this appearing after a pick doesn't
+                shift the cards above it — and it's only ever non-empty in
+                that post-pick window, never before. */}
+            <div
+              className="flex h-6 items-center justify-center text-sm font-medium transition-opacity duration-150"
+              style={{ opacity: feedback ? 1 : 0 }}
+            >
+              {feedback === "updated" ? (
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  ✓ Updated your rankings
+                </span>
+              ) : (
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  Already matches your rankings
+                </span>
+              )}
+            </div>
+          </>
         ) : (
           <div className="flex w-full flex-col items-center gap-2 rounded-xl border border-black/[.08] bg-white p-10 text-center dark:border-white/[.145] dark:bg-zinc-950">
             <p className="font-medium text-black dark:text-zinc-50">
