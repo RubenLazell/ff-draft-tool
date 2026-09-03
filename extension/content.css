@@ -61,6 +61,13 @@
   color: #9ca3af;
 }
 
+.fftool-notice {
+  padding: 8px 12px 0;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
 .fftool-toolbar {
   padding: 8px 12px 0;
 }

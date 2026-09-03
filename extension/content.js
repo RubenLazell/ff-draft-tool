@@ -188,8 +188,19 @@
       sections.push(renderSection(pos, byPos, pos, isExpanded));
     }
 
+    // Re-checked on every render (not just once at startup) so this stays
+    // accurate if ESPN's SPA routes the user into a draft without a full
+    // page reload, which wouldn't re-run this content script but would
+    // still trigger the MutationObserver watching document.body.
+    const inDraft = !!findDraftBoardRoot();
+
     panel.innerHTML = `
       ${renderHeader(available.length)}
+      ${
+        inDraft
+          ? ""
+          : `<div class="fftool-notice">Not in a draft — showing your full rankings.</div>`
+      }
       <div class="fftool-toolbar">
         <button class="fftool-toggle-kdef ${hideKDef ? "fftool-toggle-active" : ""}">
           ${hideKDef ? "K/DEF hidden" : "Hide K/DEF"}
