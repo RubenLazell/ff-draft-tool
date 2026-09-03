@@ -57,8 +57,8 @@ document.getElementById("showPanelBtn").addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
   chrome.tabs.sendMessage(tab.id, { type: "SHOW_PANEL" }, () => {
-    // No content script on this tab (not an ESPN fantasy page) — nothing
-    // to do, but read lastError so Chrome doesn't log an unchecked error.
+    // No content script on this tab (not an ESPN or Sleeper draft page) —
+    // nothing to do, but read lastError so Chrome doesn't log an unchecked error.
     void chrome.runtime.lastError;
   });
 });
@@ -74,7 +74,7 @@ document.getElementById("saveSettingsBtn").addEventListener("click", async () =>
     topOverall: Number(topOverallInput.value) || DEFAULT_TOP_OVERALL,
     topPerPosition: Number(topPerPositionInput.value) || DEFAULT_TOP_PER_POSITION,
   });
-  saveStatus.textContent = "Saved — refresh the ESPN tab to apply.";
+  saveStatus.textContent = "Saved — refresh the ESPN or Sleeper tab to apply.";
   setTimeout(() => (saveStatus.textContent = ""), 2500);
 });
 
