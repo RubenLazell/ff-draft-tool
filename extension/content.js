@@ -3,10 +3,16 @@
 // whatever ESPN's DOM reports as drafted — no network call per pick.
 (function () {
   const PANEL_ID = "fftool-panel";
-  // Clicking a position section expands it to this many, regardless of the
-  // configured "top per position" default — a quick "show me more at this
-  // spot" without changing settings for every other position too.
+  // Clicking a position (or "Overall") section expands it to this many,
+  // regardless of the configured default — a quick "show me more here"
+  // without changing settings for every other section too.
   const EXPANDED_TOP_PER_POSITION = 10;
+  const EXPANDED_TOP_OVERALL = 10;
+  // Not a real position — reuses the same expandedPositions Set/click
+  // handling as QB/RB/etc. so "Overall" gets identical expand behavior for
+  // free, just with its own count and no color swatch (POSITION_COLORS has
+  // no entry for it).
+  const OVERALL_KEY = "OVERALL";
 
   // Same fixed hue-per-position palette as the web app's cheat sheet
   // (src/app/rankings/CheatsheetView.tsx) — kept consistent rather than
@@ -185,8 +191,12 @@
       return;
     }
 
-    const overall = available.slice(0, settings.topOverall);
-    const sections = [renderSection("Overall", overall, null, false)];
+    const isOverallExpanded = expandedPositions.has(OVERALL_KEY);
+    const overallCount = isOverallExpanded
+      ? Math.max(EXPANDED_TOP_OVERALL, settings.topOverall)
+      : settings.topOverall;
+    const overall = available.slice(0, overallCount);
+    const sections = [renderSection("Overall", overall, OVERALL_KEY, isOverallExpanded)];
     for (const pos of POSITION_ORDER) {
       if (hideKDef && (pos === "K" || pos === "DEF")) continue;
       const isExpanded = expandedPositions.has(pos);
