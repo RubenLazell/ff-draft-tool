@@ -1,29 +1,56 @@
+/* Positioned below ESPN's own sticky header (measured ~150px on the mock
+   draft lobby) rather than flush at the viewport top, since that's what
+   was clipping the panel's header and #1 row behind ESPN's nav. Height is
+   capped to match, so the panel never runs past the bottom of the screen
+   either — it scrolls internally instead. */
 .fftool-panel {
   position: fixed;
-  top: 12px;
+  top: 160px;
   right: 12px;
   z-index: 999999;
-  width: 260px;
-  max-height: 80vh;
+  width: 270px;
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   background: #111827;
-  color: #f9fafb;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  color: #f3f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 12px;
-  padding: 10px;
+  line-height: 1.4;
 }
 
 .fftool-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 6px;
   font-weight: 700;
   font-size: 13px;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
+  background: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px 12px 0 0;
+}
+
+.fftool-collapse-toggle {
+  all: unset;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 11px;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.fftool-collapse-toggle:hover {
+  color: #f3f4f6;
+}
+
+.fftool-title {
+  flex: 1;
 }
 
 .fftool-count {
@@ -32,30 +59,77 @@
   color: #9ca3af;
 }
 
+.fftool-toolbar {
+  padding: 8px 12px 0;
+}
+
+.fftool-toggle-kdef {
+  all: unset;
+  cursor: pointer;
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+}
+
+.fftool-toggle-kdef:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.fftool-toggle-kdef.fftool-toggle-active {
+  background: #f3f4f6;
+  color: #111827;
+  border-color: transparent;
+}
+
 .fftool-section {
-  margin-bottom: 8px;
+  padding: 8px 12px;
+}
+
+.fftool-section + .fftool-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .fftool-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   color: #9ca3af;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
+}
+
+.fftool-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .fftool-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 2px 0;
+  padding: 3px 0;
+}
+
+.fftool-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
 }
 
 .fftool-rank {
-  color: #9ca3af;
+  color: #6b7280;
   width: 26px;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .fftool-name {
@@ -74,5 +148,5 @@
 
 .fftool-error {
   color: #fca5a5;
-  padding: 8px 0;
+  padding: 10px 12px;
 }
