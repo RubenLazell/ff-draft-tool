@@ -3,6 +3,10 @@
 // whatever ESPN's DOM reports as drafted — no network call per pick.
 (function () {
   const PANEL_ID = "fftool-panel";
+  // Clicking a position section expands it to this many, regardless of the
+  // configured "top per position" default — a quick "show me more at this
+  // spot" without changing settings for every other position too.
+  const EXPANDED_TOP_PER_POSITION = 10;
 
   // Same fixed hue-per-position palette as the web app's cheat sheet
   // (src/app/rankings/CheatsheetView.tsx) — kept consistent rather than
@@ -25,6 +29,7 @@
   };
   let hideKDef = false;
   let collapsed = false;
+  let expandedPositions = new Set();
   let observer = null;
 
   function normalizeName(name) {
@@ -89,9 +94,22 @@
     if (e.target.closest(".fftool-collapse-toggle")) {
       collapsed = !collapsed;
       renderPanel();
-    } else if (e.target.closest(".fftool-toggle-kdef")) {
+      return;
+    }
+    if (e.target.closest(".fftool-toggle-kdef")) {
       hideKDef = !hideKDef;
       chrome.storage.sync.set({ hideKDef });
+      renderPanel();
+      return;
+    }
+    const sectionTitle = e.target.closest(".fftool-section-title-clickable");
+    if (sectionTitle) {
+      const pos = sectionTitle.dataset.pos;
+      if (expandedPositions.has(pos)) {
+        expandedPositions.delete(pos);
+      } else {
+        expandedPositions.add(pos);
+      }
       renderPanel();
     }
   }
@@ -116,10 +134,16 @@
     `;
   }
 
-  function renderSection(title, players, posKey) {
+  function renderSection(title, players, posKey, expanded) {
     if (!players.length) return "";
     const color = POSITION_COLORS[posKey];
     const swatch = color ? `<span class="fftool-swatch" style="background:${color}"></span>` : "";
+    // Only actual positions toggle expand/collapse — "Overall" (posKey
+    // null) always just shows its configured count.
+    const clickable = posKey != null;
+    const chevron = clickable
+      ? `<span class="fftool-chevron">${expanded ? "▾" : "▸"}</span>`
+      : "";
     const rows = players
       .map(
         (p) => `
@@ -130,9 +154,14 @@
         </div>`
       )
       .join("");
-    return `<div class="fftool-section"><div class="fftool-section-title">${swatch}${escapeHtml(
-      title
-    )}</div>${rows}</div>`;
+    return `<div class="fftool-section">
+      <div class="fftool-section-title${clickable ? " fftool-section-title-clickable" : ""}"${
+      clickable ? ` data-pos="${posKey}"` : ""
+    }>
+        ${swatch}${escapeHtml(title)}${chevron}
+      </div>
+      ${rows}
+    </div>`;
   }
 
   function renderPanel() {
@@ -145,11 +174,15 @@
     }
 
     const overall = available.slice(0, settings.topOverall);
-    const sections = [renderSection("Overall", overall, null)];
+    const sections = [renderSection("Overall", overall, null, false)];
     for (const pos of POSITION_ORDER) {
       if (hideKDef && (pos === "K" || pos === "DEF")) continue;
-      const byPos = available.filter((p) => p.position === pos).slice(0, settings.topPerPosition);
-      sections.push(renderSection(pos, byPos, pos));
+      const isExpanded = expandedPositions.has(pos);
+      const count = isExpanded
+        ? Math.max(EXPANDED_TOP_PER_POSITION, settings.topPerPosition)
+        : settings.topPerPosition;
+      const byPos = available.filter((p) => p.position === pos).slice(0, count);
+      sections.push(renderSection(pos, byPos, pos, isExpanded));
     }
 
     panel.innerHTML = `

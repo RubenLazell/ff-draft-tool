@@ -115,6 +115,19 @@
   flex-shrink: 0;
 }
 
+.fftool-section-title-clickable {
+  cursor: pointer;
+}
+
+.fftool-section-title-clickable:hover {
+  color: #f3f4f6;
+}
+
+.fftool-chevron {
+  margin-left: auto;
+  color: #6b7280;
+}
+
 .fftool-row {
   display: flex;
   align-items: center;
