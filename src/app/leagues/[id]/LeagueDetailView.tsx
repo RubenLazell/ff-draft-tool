@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { Format } from "@/lib/rankings";
+import type { Format, RankedPlayer } from "@/lib/rankings";
 import type { TeamResult } from "@/lib/leagueScoring";
 import { UNRANKED_SLOT_TYPES } from "@/lib/leagueScoring";
 import { ESPN_UNMATCHED_PREFIX } from "@/lib/espnMatching";
 import { POSITION_ORDER, POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
 import { GuestBanner } from "@/app/rankings/GuestBanner";
+import { TradeCalculator } from "../TradeCalculator";
 
 function positionColor(position: string) {
   return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
@@ -20,6 +21,8 @@ function positionColor(position: string) {
 type LeagueDetailViewProps = {
   leagueName: string;
   results: TeamResult[];
+  rankings: RankedPlayer[];
+  league: { rosterPositions: string[]; totalRosters: number };
   format: Format;
   formats: readonly Format[];
   formatLabels: Record<Format, string>;
@@ -29,13 +32,14 @@ type LeagueDetailViewProps = {
 );
 
 export function LeagueDetailView(props: LeagueDetailViewProps) {
-  const { leagueName, results, format, formats, formatLabels, guestMode } = props;
+  const { leagueName, results, rankings, league, format, formats, formatLabels, guestMode } = props;
   const [expandedRosterId, setExpandedRosterId] = useState<number | null>(null);
+  const [showTrade, setShowTrade] = useState(false);
   const maxScore = Math.max(1, ...results.map((t) => t.score));
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
-      <div className="mx-auto w-full max-w-2xl">
+      <div className={`mx-auto w-full ${showTrade ? "max-w-5xl" : "max-w-2xl"}`}>
         {guestMode && <GuestBanner />}
         {guestMode ? (
           <button
@@ -93,17 +97,35 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
           )}
         </div>
 
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-          <span className="font-medium">Bar = strength, colors = where it comes from:</span>
-          {POSITION_ORDER.map((pos) => (
-            <span key={pos} className="flex items-center gap-1.5">
-              <span className={`h-2.5 w-2.5 rounded-full ${positionColor(pos).swatch}`} />
-              {pos}
-            </span>
-          ))}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => setShowTrade((v) => !v)}
+            className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+              showTrade
+                ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
+                : "border-black/[.08] text-black hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+            }`}
+          >
+            {showTrade ? "← Back to rankings" : "Trade Calculator"}
+          </button>
         </div>
 
-        <ol className="flex flex-col gap-2">
+        {showTrade ? (
+          <TradeCalculator results={results} rankings={rankings} league={league} />
+        ) : (
+          <>
+            <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="font-medium">Bar = strength, colors = where it comes from:</span>
+              {POSITION_ORDER.map((pos) => (
+                <span key={pos} className="flex items-center gap-1.5">
+                  <span className={`h-2.5 w-2.5 rounded-full ${positionColor(pos).swatch}`} />
+                  {pos}
+                </span>
+              ))}
+            </div>
+
+            <ol className="flex flex-col gap-2">
           {results.map((team, index) => {
             const expanded = expandedRosterId === team.rosterId;
             const barWidthPct = team.score > 0 ? Math.max(4, (team.score / maxScore) * 100) : 0;
@@ -232,7 +254,9 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
               </li>
             );
           })}
-        </ol>
+            </ol>
+          </>
+        )}
       </div>
     </div>
   );

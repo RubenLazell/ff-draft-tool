@@ -216,6 +216,33 @@ export function scoreTeam(lineup: LineupResult, replacementRanks: Record<string,
   return Object.values(computePositionBreakdown(lineup, replacementRanks)).reduce((a, b) => a + b, 0);
 }
 
+// Re-orders a rankings list by ADP (consensusRank) instead of the user's
+// own rank, with `rank` reassigned to reflect that new order — feeds the
+// exact same pipeline above (withPositionRanks -> computeReplacementRanks
+// -> computePlayerVorp -> scoreLeagueTeams) to produce a parallel "market
+// value" lens on a trade, alongside the user's own-opinion lens, with zero
+// new scoring logic. Players with no consensus coverage sort last.
+export function rankByConsensus(players: RankedPlayer[]): RankedPlayer[] {
+  const sorted = [...players].sort((a, b) => {
+    const ac = a.consensusRank ?? Infinity;
+    const bc = b.consensusRank ?? Infinity;
+    return ac - bc || a.playerId.localeCompare(b.playerId);
+  });
+  return sorted.map((p, i) => ({ ...p, rank: i + 1 }));
+}
+
+// Buckets a score delta (e.g. a trade's before/after swing) into a
+// human-readable grade. Tunable.
+export const TRADE_GRADE_THRESHOLDS = { great: 15, slight: 3 };
+export type TradeGradeTone = "great" | "good" | "fair" | "bad" | "terrible";
+export function gradeForDelta(delta: number): { label: string; tone: TradeGradeTone } {
+  if (delta > TRADE_GRADE_THRESHOLDS.great) return { label: "Great Trade", tone: "great" };
+  if (delta > TRADE_GRADE_THRESHOLDS.slight) return { label: "Slight Edge", tone: "good" };
+  if (delta > -TRADE_GRADE_THRESHOLDS.slight) return { label: "Fair Trade", tone: "fair" };
+  if (delta > -TRADE_GRADE_THRESHOLDS.great) return { label: "Slight Loss", tone: "bad" };
+  return { label: "Bad Trade", tone: "terrible" };
+}
+
 export type TeamResult = {
   rosterId: number;
   ownerId: string | null;

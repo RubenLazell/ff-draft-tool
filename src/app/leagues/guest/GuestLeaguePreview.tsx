@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FORMATS, FORMAT_LABELS, type Format } from "@/lib/rankings";
+import { FORMATS, FORMAT_LABELS, type Format, type RankedPlayer } from "@/lib/rankings";
 import type { TeamResult } from "@/lib/leagueScoring";
 import { previewLeague } from "../actions";
 import { LeagueDetailView } from "../[id]/LeagueDetailView";
@@ -23,7 +23,12 @@ export function GuestLeaguePreview() {
 
   const [submitted, setSubmitted] = useState<Submitted | null>(null);
   const [format, setFormat] = useState<Format>("PPR");
-  const [preview, setPreview] = useState<{ leagueName: string; results: TeamResult[] } | null>(null);
+  const [preview, setPreview] = useState<{
+    leagueName: string;
+    results: TeamResult[];
+    rankings: RankedPlayer[];
+    league: { rosterPositions: string[]; totalRosters: number };
+  } | null>(null);
 
   function runPreview(params: Submitted, f: Format) {
     setError(null);
@@ -35,7 +40,12 @@ export function GuestLeaguePreview() {
       }
       setSubmitted(params);
       setFormat(f);
-      setPreview({ leagueName: result.leagueName, results: result.results });
+      setPreview({
+        leagueName: result.leagueName,
+        results: result.results,
+        rankings: result.rankings,
+        league: result.league,
+      });
     });
   }
 
@@ -60,6 +70,8 @@ export function GuestLeaguePreview() {
         guestMode
         leagueName={preview.leagueName}
         results={preview.results}
+        rankings={preview.rankings}
+        league={preview.league}
         format={format}
         formats={FORMATS}
         formatLabels={FORMAT_LABELS}

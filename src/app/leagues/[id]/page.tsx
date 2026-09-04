@@ -62,6 +62,8 @@ export default async function LeagueDetailPage({
       leagueRowId={savedLeague.id}
       leagueName={savedLeague.league_name ?? league.name}
       results={results}
+      rankings={rankings}
+      league={{ rosterPositions: league.rosterPositions, totalRosters: league.totalRosters }}
       format={format}
       formats={FORMATS}
       formatLabels={FORMAT_LABELS}

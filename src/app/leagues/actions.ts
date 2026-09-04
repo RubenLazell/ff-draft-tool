@@ -5,7 +5,7 @@ import { createServiceRoleClient } from "@/lib/supabase/service";
 import { fetchSleeperLeague } from "@/lib/sleeper";
 import { fetchEspnLeague, EspnAuthRequiredError } from "@/lib/espn";
 import { fetchAndResolveLeague } from "@/lib/leagueImport";
-import { getDefaultRankings, type Format } from "@/lib/rankings";
+import { getDefaultRankings, type Format, type RankedPlayer } from "@/lib/rankings";
 import { scoreLeagueTeams, type TeamResult } from "@/lib/leagueScoring";
 
 export async function addLeague(leagueId: string): Promise<{ error: string | null }> {
@@ -90,8 +90,14 @@ export async function addEspnLeague(
 }
 
 export type LeaguePreview =
-  | { error: string; leagueName?: undefined; results?: undefined }
-  | { error: null; leagueName: string; results: TeamResult[] };
+  | { error: string; leagueName?: undefined; results?: undefined; rankings?: undefined; league?: undefined }
+  | {
+      error: null;
+      leagueName: string;
+      results: TeamResult[];
+      rankings: RankedPlayer[];
+      league: { rosterPositions: string[]; totalRosters: number };
+    };
 
 // Guest-accessible: no auth, nothing persisted. Scored against default
 // consensus rankings rather than a signed-in user's own — reads run
@@ -119,8 +125,15 @@ export async function previewLeague(
   if (fetchResult.error !== null) return { error: fetchResult.error };
 
   const rankings = await getDefaultRankings(supabase, format);
-  const results = scoreLeagueTeams(fetchResult.resolved.league, fetchResult.resolved.rosters, rankings);
-  return { error: null, leagueName: fetchResult.resolved.league.name, results };
+  const { league, rosters } = fetchResult.resolved;
+  const results = scoreLeagueTeams(league, rosters, rankings);
+  return {
+    error: null,
+    leagueName: league.name,
+    results,
+    rankings,
+    league: { rosterPositions: league.rosterPositions, totalRosters: league.totalRosters },
+  };
 }
 
 export async function removeLeague(id: string): Promise<{ error: string | null }> {
