@@ -35,6 +35,18 @@ export const FLEX_ALLOCATION: Record<string, Partial<Record<string, number>>> = 
   SUPER_FLEX: { QB: 0.5, RB: 0.2, WR: 0.2, TE: 0.1 },
 };
 
+// K and DEF are highly streamable — the gap between a great and mediocre
+// one barely matters to real team strength, unlike a skill position, since
+// almost any team can pick up a similarly-productive one off waivers most
+// weeks. Down-weighted rather than excluded outright, so a genuinely elite
+// one still counts for a token amount. Applied on top of BENCH_WEIGHT for
+// a bench K/DEF (the two multiply). Tunable; defaults to 1 (no change) for
+// every position not listed.
+export const POSITION_WEIGHT: Record<string, number> = {
+  K: 0.1,
+  DEF: 0.1,
+};
+
 // IDP slots this app has zero ranking data for (no defensive-player ranks
 // anywhere in `players`/`consensus_rankings`) — always shown as unfilled,
 // never scored, regardless of who's actually rostered in them.
@@ -92,7 +104,8 @@ export function computePlayerVorp(
 ): number {
   const replacement = replacementRanks[position];
   if (replacement == null) return 0; // no replacement level computed for this position (e.g. IDP)
-  return Math.max(0, replacement - positionRank);
+  const weight = POSITION_WEIGHT[position] ?? 1;
+  return Math.max(0, replacement - positionRank) * weight;
 }
 
 // Matches a Sleeper roster's player IDs directly against the user's own
