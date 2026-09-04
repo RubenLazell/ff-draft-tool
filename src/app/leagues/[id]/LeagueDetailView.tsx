@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Format } from "@/lib/rankings";
 import type { TeamResult } from "@/lib/leagueScoring";
 import { UNRANKED_SLOT_TYPES } from "@/lib/leagueScoring";
+import { ESPN_UNMATCHED_PREFIX } from "@/lib/espnMatching";
 
 export function LeagueDetailView({
   leagueRowId,
@@ -136,12 +137,25 @@ export function LeagueDetailView({
                       </>
                     )}
 
-                    {team.unresolvedPlayerIds.length > 0 && (
-                      <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
-                        {team.unresolvedPlayerIds.length} player
-                        {team.unresolvedPlayerIds.length === 1 ? "" : "s"} not found in your rankings.
-                      </p>
-                    )}
+                    {team.unresolvedPlayerIds.length > 0 &&
+                      (() => {
+                        // ESPN entries carry a readable name (no shared id
+                        // space with our players table, matched by name at
+                        // import time); Sleeper's are opaque ids not worth
+                        // showing raw, so those just get counted.
+                        const unmatchedNames = team.unresolvedPlayerIds
+                          .filter((id) => id.startsWith(ESPN_UNMATCHED_PREFIX))
+                          .map((id) => id.slice(ESPN_UNMATCHED_PREFIX.length));
+                        const opaqueCount = team.unresolvedPlayerIds.length - unmatchedNames.length;
+                        return (
+                          <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
+                            {unmatchedNames.length > 0 &&
+                              `Not found in your rankings: ${unmatchedNames.join(", ")}. `}
+                            {opaqueCount > 0 &&
+                              `${opaqueCount} player${opaqueCount === 1 ? "" : "s"} not found in your rankings.`}
+                          </p>
+                        );
+                      })()}
                   </div>
                 )}
               </li>
