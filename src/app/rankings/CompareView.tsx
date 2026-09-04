@@ -110,8 +110,15 @@ export function CompareView({
     if (pairs.length === 0) return null;
     // +1 avoids hashSeed(0) === 0, which would otherwise make the very
     // first pair shown always the same deterministic starting point.
-    const index = hashSeed(dealSeed + 1) % pairs.length;
-    return pairs[index];
+    const seed = dealSeed + 1;
+    const index = hashSeed(seed) % pairs.length;
+    const pair = pairs[index];
+    // Pairs are always built [better-ranked, worse-ranked] (see `pairs`
+    // above), so without this the higher-ranked player would land on the
+    // left every single time. A second, differently-mixed hash of the same
+    // seed decides the side — a fresh coin flip per dealt pair, still pure.
+    const flip = hashSeed(seed ^ 0x5bd1e995) % 2 === 1;
+    return flip ? [pair[1], pair[0]] : pair;
   }, [pairs, dealSeed]);
 
   function handlePick(picked: DisplayPlayer, other: DisplayPlayer) {
