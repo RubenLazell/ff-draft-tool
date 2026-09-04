@@ -99,7 +99,12 @@ export async function fetchEspnLeague(
   };
   if (credentials) headers.Cookie = `SWID=${credentials.swid}; espn_s2=${credentials.espnS2}`;
 
-  const url = `https://fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leagues/${leagueId}?view=mTeam&view=mRoster&view=mSettings`;
+  // Verified live: `fantasy.espn.com/apis/v3/...` (the host cited by most
+  // community writeups) redirects server-side requests to the marketing
+  // homepage's HTML instead of hitting the actual API — even with valid
+  // cookies for a real league. `lm-api-reads.fantasy.espn.com` is the host
+  // that actually serves the JSON.
+  const url = `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leagues/${leagueId}?view=mTeam&view=mRoster&view=mSettings`;
   const res = await fetch(url, { headers });
 
   if (res.status === 404) return null;
