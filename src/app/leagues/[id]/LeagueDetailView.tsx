@@ -6,6 +6,11 @@ import type { Format } from "@/lib/rankings";
 import type { TeamResult } from "@/lib/leagueScoring";
 import { UNRANKED_SLOT_TYPES } from "@/lib/leagueScoring";
 import { ESPN_UNMATCHED_PREFIX } from "@/lib/espnMatching";
+import { POSITION_ORDER, POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
+
+function positionColor(position: string) {
+  return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
+}
 
 export function LeagueDetailView({
   leagueRowId,
@@ -23,6 +28,7 @@ export function LeagueDetailView({
   formatLabels: Record<Format, string>;
 }) {
   const [expandedRosterId, setExpandedRosterId] = useState<number | null>(null);
+  const maxScore = Math.max(1, ...results.map((t) => t.score));
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
@@ -58,9 +64,20 @@ export function LeagueDetailView({
           ))}
         </div>
 
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="font-medium">Bar = strength, colors = where it comes from:</span>
+          {POSITION_ORDER.map((pos) => (
+            <span key={pos} className="flex items-center gap-1.5">
+              <span className={`h-2.5 w-2.5 rounded-full ${positionColor(pos).swatch}`} />
+              {pos}
+            </span>
+          ))}
+        </div>
+
         <ol className="flex flex-col gap-2">
           {results.map((team, index) => {
             const expanded = expandedRosterId === team.rosterId;
+            const barWidthPct = team.score > 0 ? Math.max(4, (team.score / maxScore) * 100) : 0;
             return (
               <li
                 key={team.rosterId}
@@ -69,22 +86,42 @@ export function LeagueDetailView({
                 <button
                   type="button"
                   onClick={() => setExpandedRosterId(expanded ? null : team.rosterId)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                  className="flex w-full flex-col gap-2 px-4 py-3 text-left"
                 >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span className="w-6 shrink-0 text-sm font-semibold text-zinc-400 dark:text-zinc-500">
-                      #{index + 1}
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="w-6 shrink-0 text-sm font-semibold text-zinc-400 dark:text-zinc-500">
+                        #{index + 1}
+                      </span>
+                      <span className="min-w-0 truncate font-medium text-black dark:text-zinc-50">
+                        {team.teamName}
+                      </span>
                     </span>
-                    <span className="min-w-0 truncate font-medium text-black dark:text-zinc-50">
-                      {team.teamName}
+                    <span className="flex shrink-0 items-center gap-3">
+                      <span className="text-sm text-zinc-500 dark:text-zinc-400">
+                        {team.score.toFixed(1)}
+                      </span>
+                      <span className="text-zinc-400 dark:text-zinc-500">{expanded ? "▾" : "▸"}</span>
                     </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-3">
-                    <span className="text-sm text-zinc-500 dark:text-zinc-400">
-                      {team.score.toFixed(1)}
-                    </span>
-                    <span className="text-zinc-400 dark:text-zinc-500">{expanded ? "▾" : "▸"}</span>
-                  </span>
+                  </div>
+
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <div className="flex h-full rounded-full" style={{ width: `${barWidthPct}%` }}>
+                      {POSITION_ORDER.map((pos) => {
+                        const value = team.positionBreakdown[pos] ?? 0;
+                        if (value <= 0 || team.score <= 0) return null;
+                        const sharePct = (value / team.score) * 100;
+                        return (
+                          <div
+                            key={pos}
+                            className={positionColor(pos).swatch}
+                            style={{ width: `${sharePct}%` }}
+                            title={`${pos}: ${value.toFixed(1)}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 </button>
 
                 {expanded && (
@@ -94,21 +131,22 @@ export function LeagueDetailView({
                     </p>
                     <div className="mb-3 flex flex-col gap-1">
                       {team.lineup.starters.map((slot, slotIndex) => (
-                        <div
-                          key={slotIndex}
-                          className="flex items-center gap-2 text-sm"
-                        >
+                        <div key={slotIndex} className="flex items-center gap-2 text-sm">
                           <span className="w-16 shrink-0 text-xs font-medium text-zinc-400 dark:text-zinc-500">
                             {slot.slotType}
                           </span>
                           {slot.player ? (
-                            <span className="min-w-0 truncate text-black dark:text-zinc-50">
-                              {slot.player.fullName}{" "}
-                              <span className="text-zinc-500 dark:text-zinc-400">
-                                ({slot.player.position}
-                                {slot.player.positionRank})
+                            <>
+                              <span
+                                className={`shrink-0 rounded px-1 text-[10px] font-bold ${positionColor(slot.player.position).bg} ${positionColor(slot.player.position).text}`}
+                              >
+                                {slot.player.position}
+                                {slot.player.positionRank}
                               </span>
-                            </span>
+                              <span className="min-w-0 truncate text-black dark:text-zinc-50">
+                                {slot.player.fullName}
+                              </span>
+                            </>
                           ) : (
                             <span className="text-zinc-400 italic dark:text-zinc-500">
                               {UNRANKED_SLOT_TYPES.has(slot.slotType) ? "unranked" : "empty"}
@@ -125,11 +163,15 @@ export function LeagueDetailView({
                         </p>
                         <div className="mb-3 flex flex-col gap-1">
                           {team.lineup.bench.map((player) => (
-                            <div key={player.playerId} className="text-sm text-black dark:text-zinc-50">
-                              {player.fullName}{" "}
-                              <span className="text-zinc-500 dark:text-zinc-400">
-                                ({player.position}
-                                {player.positionRank})
+                            <div key={player.playerId} className="flex items-center gap-2 text-sm">
+                              <span
+                                className={`shrink-0 rounded px-1 text-[10px] font-bold ${positionColor(player.position).bg} ${positionColor(player.position).text}`}
+                              >
+                                {player.position}
+                                {player.positionRank}
+                              </span>
+                              <span className="min-w-0 truncate text-black dark:text-zinc-50">
+                                {player.fullName}
                               </span>
                             </div>
                           ))}

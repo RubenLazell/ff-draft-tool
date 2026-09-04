@@ -191,16 +191,29 @@ export function buildOptimalLineup(
   return { starters, bench };
 }
 
+// VORP contributed per position (starters at full value, bench at
+// BENCH_WEIGHT) — the sum of every entry is the team's total score. Powers
+// both the score itself and a visual "what is this team's strength made
+// of" breakdown, so the UI never needs to recompute or duplicate this.
+export function computePositionBreakdown(
+  lineup: LineupResult,
+  replacementRanks: Record<string, number>
+): Record<string, number> {
+  const breakdown: Record<string, number> = {};
+  for (const slot of lineup.starters) {
+    if (!slot.player) continue;
+    const v = computePlayerVorp(slot.player.positionRank, slot.player.position, replacementRanks);
+    breakdown[slot.player.position] = (breakdown[slot.player.position] ?? 0) + v;
+  }
+  for (const p of lineup.bench) {
+    const v = computePlayerVorp(p.positionRank, p.position, replacementRanks) * BENCH_WEIGHT;
+    breakdown[p.position] = (breakdown[p.position] ?? 0) + v;
+  }
+  return breakdown;
+}
+
 export function scoreTeam(lineup: LineupResult, replacementRanks: Record<string, number>): number {
-  const starterValue = lineup.starters.reduce((sum, slot) => {
-    if (!slot.player) return sum;
-    return sum + computePlayerVorp(slot.player.positionRank, slot.player.position, replacementRanks);
-  }, 0);
-  const benchValue = lineup.bench.reduce(
-    (sum, p) => sum + computePlayerVorp(p.positionRank, p.position, replacementRanks),
-    0
-  );
-  return starterValue + BENCH_WEIGHT * benchValue;
+  return Object.values(computePositionBreakdown(lineup, replacementRanks)).reduce((a, b) => a + b, 0);
 }
 
 export type TeamResult = {
@@ -208,6 +221,7 @@ export type TeamResult = {
   ownerId: string | null;
   teamName: string;
   score: number;
+  positionBreakdown: Record<string, number>;
   lineup: LineupResult;
   unresolvedPlayerIds: string[];
 };
@@ -227,12 +241,14 @@ export function scoreLeagueTeams(
   const results = rosters.map((roster) => {
     const { resolved, unresolvedPlayerIds } = resolveRosterPlayers(roster.playerIds, rankingsById);
     const lineup = buildOptimalLineup(league.rosterPositions, resolved);
-    const score = scoreTeam(lineup, replacementRanks);
+    const positionBreakdown = computePositionBreakdown(lineup, replacementRanks);
+    const score = Object.values(positionBreakdown).reduce((a, b) => a + b, 0);
     return {
       rosterId: roster.rosterId,
       ownerId: roster.ownerId,
       teamName: roster.teamName,
       score,
+      positionBreakdown,
       lineup,
       unresolvedPlayerIds,
     };
