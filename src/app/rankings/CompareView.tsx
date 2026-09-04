@@ -39,6 +39,46 @@ function hashSeed(n: number): number {
   return x >>> 0;
 }
 
+// Comparisons aren't limited to strict neighbors (gap 1) — the partner can
+// be up to 5 spots away in either direction, with the gap size drawn from
+// a Binomial(4, p) distribution mapped onto gap = k+1 for k = 0..4. A small
+// p keeps almost all the weight on gap 1-2 (close, high-value comparisons)
+// while still occasionally reaching out to gap 5 (a coarser sanity check
+// on the broader ordering) — the classic binomial shape, just skewed small
+// instead of centered, since p is well under 0.5.
+const MAX_GAP = 5;
+// A binomial's mode sits near n*p, not at 0 — with n=4, anything at or
+// above p=0.2 actually peaks at gap 2 (or higher), not gap 1. 0.15 keeps
+// gap 1 clearly the most likely (~52%) while gap 2/3 still show up
+// regularly and gap 4/5 stay rare: 52% / 37% / 10% / 1% / 0.1%.
+const GAP_BINOMIAL_P = 0.15;
+
+function binomialCoefficient(n: number, k: number): number {
+  let result = 1;
+  for (let i = 0; i < k; i++) result = (result * (n - i)) / (i + 1);
+  return result;
+}
+
+// Precomputed once at module load — a fixed CDF over gap sizes 1..MAX_GAP,
+// e.g. GAP_CDF[0] is P(gap <= 1), GAP_CDF[1] is P(gap <= 2), etc.
+const GAP_CDF: number[] = (() => {
+  const n = MAX_GAP - 1;
+  let cumulative = 0;
+  return Array.from({ length: MAX_GAP }, (_, k) => {
+    cumulative += binomialCoefficient(n, k) * GAP_BINOMIAL_P ** k * (1 - GAP_BINOMIAL_P) ** (n - k);
+    return cumulative;
+  });
+})();
+
+// Inverse-transform sampling: turns a uniform value in [0, 1) into a gap
+// size 1..MAX_GAP distributed per GAP_CDF above.
+function pickGap(u: number): number {
+  for (let k = 0; k < GAP_CDF.length; k++) {
+    if (u < GAP_CDF[k]) return k + 1;
+  }
+  return MAX_GAP;
+}
+
 export function CompareView({
   initialRankings,
   format,
@@ -78,48 +118,68 @@ export function CompareView({
     [withRanks]
   );
 
-  // Pairs of adjacent players within the current scope — "adjacent" means
-  // next to each other in the user's own order, not just close in value.
-  // Filtering the pool down to one position preserves a clean 1..K prefix
-  // for that position (position rank only increases with overall rank), so
-  // consecutive pool entries of the same position are genuinely neighbors
-  // in that position's own ordering too, not just coincidentally nearby.
-  const pairs = useMemo(() => {
-    const scoped = scope === "OVERALL" ? pool : pool.filter((p) => p.position === scope);
-    const result: [DisplayPlayer, DisplayPlayer][] = [];
-    for (let i = 0; i < scoped.length - 1; i++) {
-      result.push([scoped[i], scoped[i + 1]]);
-    }
-    return result;
-  }, [pool, scope]);
+  // The list this tool deals pairs from — filtering the pool down to one
+  // position preserves a clean 1..K prefix for that position (position
+  // rank only increases with overall rank), so index arithmetic within
+  // this array (below) lands on genuine neighbors-by-position too, not
+  // just coincidentally-nearby entries.
+  const scoped = useMemo(
+    () => (scope === "OVERALL" ? pool : pool.filter((p) => p.position === scope)),
+    [pool, scope]
+  );
 
   // currentPair is fully derived, not stored-and-set-in-an-effect: `dealSeed`
   // exists purely to force a re-deal after a decision that didn't change
   // `players` (the user picked the already-higher-ranked player, so there
-  // was nothing to swap). A swap naturally produces a new `pairs` reference
+  // was nothing to swap). A swap naturally produces a new `scoped` reference
   // too, but bumping dealSeed either way keeps "deal a new pair after every
   // decision" simple and consistent instead of relying on that side effect.
   // Deliberately not Math.random() — this needs to run inside a pure
-  // useMemo, so it's hashSeed()'d instead: same (pairs, dealSeed) always
-  // yields the same pick, but the hash's full bit-avalanche means
-  // consecutive seeds land on genuinely scattered indices (a plain
-  // `dealSeed * constant` step, tried first, degenerates for many pool
-  // sizes — e.g. mod 20 it walks by 1 each time, which just feels
-  // sequential, not random).
+  // useMemo, so everything below is hashSeed()'d instead: same
+  // (scoped, dealSeed) always yields the same pick, but the hash's full
+  // bit-avalanche means consecutive seeds land on genuinely scattered
+  // results (a plain `dealSeed * constant` step, tried first, degenerates
+  // for many list lengths — e.g. mod 20 it walked by 1 each time, which
+  // just felt sequential, not random).
   const currentPair = useMemo(() => {
-    if (pairs.length === 0) return null;
+    const n = scoped.length;
+    if (n < 2) return null;
     // +1 avoids hashSeed(0) === 0, which would otherwise make the very
     // first pair shown always the same deterministic starting point.
     const seed = dealSeed + 1;
-    const index = hashSeed(seed) % pairs.length;
-    const pair = pairs[index];
-    // Pairs are always built [better-ranked, worse-ranked] (see `pairs`
-    // above), so without this the higher-ranked player would land on the
-    // left every single time. A second, differently-mixed hash of the same
-    // seed decides the side — a fresh coin flip per dealt pair, still pure.
-    const flip = hashSeed(seed ^ 0x5bd1e995) % 2 === 1;
-    return flip ? [pair[1], pair[0]] : pair;
-  }, [pairs, dealSeed]);
+
+    const anchorIndex = hashSeed(seed) % n;
+    // Binomial-weighted gap (see pickGap above), read off a uniform value
+    // derived from a differently-mixed hash of the same seed so it isn't
+    // correlated with the anchor's own index. Clamped to what's actually
+    // reachable from this specific anchor in at least one direction — not
+    // just `n - 1` — since e.g. the middle of a 3-player list can't reach
+    // 2 spots in either direction even though the list itself supports a
+    // gap of 2 from its ends.
+    const u = hashSeed(seed ^ 0x27d4eb2f) / 0x100000000;
+    const maxFeasibleGap = Math.max(anchorIndex, n - 1 - anchorIndex);
+    const gap = Math.min(pickGap(u), maxFeasibleGap);
+    const goForward = hashSeed(seed ^ 0x9e3779b9) % 2 === 0;
+
+    let partnerIndex = anchorIndex + (goForward ? gap : -gap);
+    if (partnerIndex < 0 || partnerIndex >= n) {
+      // That direction doesn't fit from this anchor — the other direction
+      // is guaranteed to, since gap was clamped to whichever side has more
+      // room.
+      partnerIndex = anchorIndex + (goForward ? -gap : gap);
+    }
+
+    const a = scoped[anchorIndex];
+    const b = scoped[partnerIndex];
+    const ordered: [DisplayPlayer, DisplayPlayer] = a.rank < b.rank ? [a, b] : [b, a];
+
+    // Without this, the better-ranked player (always `ordered[0]`) would
+    // land on the left every single time. A third, differently-mixed hash
+    // of the same seed decides the side — a fresh coin flip per dealt
+    // pair, still pure.
+    const flipSides = hashSeed(seed ^ 0x5bd1e995) % 2 === 1;
+    return flipSides ? [ordered[1], ordered[0]] : ordered;
+  }, [scoped, dealSeed]);
 
   function handlePick(picked: DisplayPlayer, other: DisplayPlayer) {
     setPickedId(picked.playerId);

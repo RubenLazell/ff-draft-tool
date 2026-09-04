@@ -22,10 +22,12 @@ export async function updateRank(playerId: string, newRank: number, format: Form
 }
 
 // Used by the head-to-head comparison tool — the two players being
-// compared are always adjacent in rank, so trading their two rank values
-// directly reorders them without needing the fractional-midpoint math
-// drag-and-drop uses (there's no "neighbor" to compute a midpoint against;
-// they're already each other's neighbor).
+// compared can be a few spots apart (not just strict neighbors), but a
+// direct swap of their two rank values is still exactly correct: it moves
+// each into the other's old slot and leaves everyone else's rank, and thus
+// relative order, untouched — no fractional-midpoint math needed, unlike
+// inserting a player between two specific neighbors the way drag-and-drop
+// does.
 export async function swapRanks(
   playerIdA: string,
   rankA: number,
