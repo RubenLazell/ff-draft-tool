@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import type { RankedPlayer, Format } from "@/lib/rankings";
 import { getInjuryBadge, POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
+import { loadGuestOrder, saveGuestOrder, applyGuestOrder } from "@/lib/guestRankings";
+import { GuestBanner } from "./GuestBanner";
 import { swapRanks } from "./actions";
 
 // Only these four are offered as a scope — K/DEF are excluded from this
@@ -84,13 +86,23 @@ export function CompareView({
   format,
   formats,
   formatLabels,
+  guestMode = false,
 }: {
   initialRankings: RankedPlayer[];
   format: Format;
   formats: readonly Format[];
   formatLabels: Record<Format, string>;
+  guestMode?: boolean;
 }) {
-  const [players, setPlayers] = useState(initialRankings);
+  // Guest mode's saved order lives in localStorage, invisible to the server
+  // render that produced `initialRankings` (the consensus default) — read
+  // here in the lazy initializer so the client's first render already has
+  // it, rather than seeding with the default and correcting in an effect.
+  const [players, setPlayers] = useState(() => {
+    if (!guestMode) return initialRankings;
+    const order = loadGuestOrder(format);
+    return order ? applyGuestOrder(initialRankings, order) : initialRankings;
+  });
   const [scope, setScope] = useState<Scope>("OVERALL");
   const [dealSeed, setDealSeed] = useState(0);
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -201,10 +213,14 @@ export function CompareView({
         .sort((a, b) => a.rank - b.rank);
       setPlayers(nextPlayers);
 
-      startTransition(async () => {
-        const result = await swapRanks(picked.playerId, picked.rank, other.playerId, other.rank, format);
-        if (result.error) setPlayers(previousPlayers);
-      });
+      if (guestMode) {
+        saveGuestOrder(format, nextPlayers);
+      } else {
+        startTransition(async () => {
+          const result = await swapRanks(picked.playerId, picked.rank, other.playerId, other.rank, format);
+          if (result.error) setPlayers(previousPlayers);
+        });
+      }
     } else {
       setFeedback("unchanged");
     }
@@ -219,9 +235,14 @@ export function CompareView({
   return (
     <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-10 dark:bg-black">
       <div className="flex w-full max-w-3xl flex-col items-center gap-6">
+        {guestMode && (
+          <div className="w-full">
+            <GuestBanner />
+          </div>
+        )}
         <div className="flex w-full items-center justify-between">
           <Link
-            href="/rankings"
+            href={guestMode ? "/rankings/guest" : "/rankings"}
             className="text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
           >
             ← Back to rankings
@@ -246,7 +267,7 @@ export function CompareView({
           {formats.map((f) => (
             <Link
               key={f}
-              href={`/rankings/compare?format=${f}`}
+              href={`${guestMode ? "/rankings/compare/guest" : "/rankings/compare"}?format=${f}`}
               className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                 format === f
                   ? "border-transparent bg-black text-white dark:bg-white dark:text-black"

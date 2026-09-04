@@ -131,6 +131,52 @@ async function appendMissingPlayers(
   return true;
 }
 
+// Guest mode's board: the same consensus-rank-first, search-rank-fallback
+// seed order new signed-up users get (see getOrCreateUserRankings above),
+// but with no user_id to write against — just returned directly, with rank
+// synthesized from sort position. Reads `players`/`consensus_rankings`
+// directly rather than through `user_rankings`, so it needs a client that
+// can read those tables without a user session (RLS blocks the anon key
+// there the same as everywhere else) — callers pass a service-role client.
+export async function getDefaultRankings(
+  supabase: SupabaseClient,
+  format: Format
+): Promise<RankedPlayer[]> {
+  const { data: players, error } = await supabase.from("players").select(
+    "id, full_name, position, team, bye_week, injury_status, injury_body_part, injury_notes, practice_participation, search_rank, consensus_rankings(consensus_rank, format)"
+  );
+  if (error) throw error;
+  if (!players || players.length === 0) return [];
+
+  const sortable = players.map((p) => {
+    const consensusRows = (p.consensus_rankings ?? []) as {
+      consensus_rank: number;
+      format: string;
+    }[];
+    const consensus = consensusRows.find((c) => c.format === format);
+    return {
+      player: p,
+      consensusRank: consensus?.consensus_rank ?? null,
+      sortValue: consensus?.consensus_rank ?? p.search_rank ?? Infinity,
+    };
+  });
+  sortable.sort((a, b) => a.sortValue - b.sortValue || a.player.id.localeCompare(b.player.id));
+
+  return sortable.map((entry, i) => ({
+    playerId: entry.player.id,
+    fullName: entry.player.full_name,
+    position: entry.player.position,
+    team: entry.player.team,
+    rank: i + 1,
+    consensusRank: entry.consensusRank,
+    injuryStatus: entry.player.injury_status,
+    injuryBodyPart: entry.player.injury_body_part,
+    injuryNotes: entry.player.injury_notes,
+    practiceParticipation: entry.player.practice_participation,
+    byeWeek: entry.player.bye_week,
+  }));
+}
+
 async function fetchRankings(
   supabase: SupabaseClient,
   userId: string,

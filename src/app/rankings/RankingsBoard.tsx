@@ -26,6 +26,8 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { updateRank, renormalizeRanks } from "./actions";
 import { FORMATS, FORMAT_LABELS, type Format, type RankedPlayer } from "@/lib/rankings";
+import { loadGuestOrder, saveGuestOrder, applyGuestOrder } from "@/lib/guestRankings";
+import { GuestBanner } from "./GuestBanner";
 import {
   getDeltaBucket,
   DELTA_ROW_CLASSES,
@@ -57,13 +59,23 @@ export function RankingsBoard({
   initialRankings,
   format,
   aiInsightsEnabled,
+  guestMode = false,
 }: {
   initialRankings: RankedPlayer[];
   format: Format;
   aiInsightsEnabled: boolean;
+  guestMode?: boolean;
 }) {
   const router = useRouter();
-  const [players, setPlayers] = useState(initialRankings); // full order
+  // Guest mode's saved order lives in localStorage, invisible to the server
+  // render that produced `initialRankings` (the consensus default) — read
+  // here in the lazy initializer so the client's first render already has
+  // it, rather than seeding with the default and correcting in an effect.
+  const [players, setPlayers] = useState(() => {
+    if (!guestMode) return initialRankings;
+    const order = loadGuestOrder(format);
+    return order ? applyGuestOrder(initialRankings, order) : initialRankings;
+  }); // full order
   const [filter, setFilter] = useState<PositionFilter>("ALL");
   const [hideKDef, setHideKDef] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -273,6 +285,15 @@ export function RankingsBoard({
       .sort((a, b) => a.rank - b.rank);
     setPlayers(nextPlayers); // optimistic update
 
+    if (guestMode) {
+      // No account to persist to — the ordered id list in localStorage is
+      // the entire "database" here, and it stores position, not the
+      // fractional rank value, so there's no collision/renormalize case to
+      // handle the way the signed-in path below does.
+      saveGuestOrder(format, nextPlayers);
+      return;
+    }
+
     startTransition(async () => {
       if (collided) {
         // Fractional rank exhausted between these two neighbors (should be
@@ -307,17 +328,22 @@ export function RankingsBoard({
 
   function handleRefresh() {
     setRefreshing(true);
-    router.push(`/rankings?format=${format}&t=${Date.now()}`);
+    const base = guestMode ? "/rankings/guest" : "/rankings";
+    router.push(`${base}?format=${format}&t=${Date.now()}`);
   }
+
+  const rankingsBase = guestMode ? "/rankings/guest" : "/rankings";
+  const compareBase = guestMode ? "/rankings/compare/guest" : "/rankings/compare";
 
   return (
     <div>
+      {guestMode && <GuestBanner />}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">
           {FORMATS.map((f) => (
             <Link
               key={f}
-              href={`/rankings?format=${f}`}
+              href={`${rankingsBase}?format=${f}`}
               className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                 format === f
                   ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
@@ -330,17 +356,19 @@ export function RankingsBoard({
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
-            href={`/rankings/compare?format=${format}`}
+            href={`${compareBase}?format=${format}`}
             className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
           >
             Head-to-head
           </Link>
-          <button
-            onClick={() => setShowCheatsheetPicker(true)}
-            className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
-          >
-            Create printable draft cheatsheet
-          </button>
+          {!guestMode && (
+            <button
+              onClick={() => setShowCheatsheetPicker(true)}
+              className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+            >
+              Create printable draft cheatsheet
+            </button>
+          )}
           <button
             onClick={handleRefresh}
             disabled={refreshing}

@@ -119,6 +119,21 @@ export default async function Home() {
               Log in
             </Link>
           </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <Link
+              href="/rankings/guest"
+              className="text-sm font-medium text-black underline dark:text-zinc-50"
+            >
+              Or continue as a guest →
+            </Link>
+            <p className="max-w-sm text-xs text-zinc-500 dark:text-zinc-400">
+              No account needed, but guest rankings are saved only in this
+              browser — they won&apos;t sync across devices, work with the
+              Chrome extension, or unlock AI insights.
+            </p>
+          </div>
+
           <AiInsightsToggle enabled={false} disabled disabledReason="logged-out" />
         </div>
       )}
