@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { RankedPlayer } from "@/lib/rankings";
+import type { RankedPlayer, Format } from "@/lib/rankings";
+import { loadGuestOrder, applyGuestOrder } from "@/lib/guestRankings";
+import { GuestBanner } from "./GuestBanner";
 import {
   getDeltaBucket,
   DELTA_TEXT_CLASSES,
@@ -26,14 +28,26 @@ type DisplayPlayer = RankedPlayer & { overallRank: number; positionRank: number 
 export function CheatsheetView({
   players,
   formatLabel,
+  guestMode = false,
+  format,
 }: {
   players: RankedPlayer[];
   formatLabel: string;
+  guestMode?: boolean;
+  format?: Format;
 }) {
   const [top200Only, setTop200Only] = useState(false);
+  // Same lazy-initializer pattern as RankingsBoard/CompareView — reads
+  // localStorage once on the client's first render rather than in an
+  // effect, since this page's data never changes shape after mount.
+  const [effectivePlayers] = useState(() => {
+    if (!guestMode || !format) return players;
+    const order = loadGuestOrder(format);
+    return order ? applyGuestOrder(players, order) : players;
+  });
 
   const positionCounters: Record<string, number> = {};
-  const withRanks: DisplayPlayer[] = players.map((p, i) => {
+  const withRanks: DisplayPlayer[] = effectivePlayers.map((p, i) => {
     positionCounters[p.position] = (positionCounters[p.position] ?? 0) + 1;
     return { ...p, overallRank: i + 1, positionRank: positionCounters[p.position] };
   });
@@ -65,9 +79,15 @@ export function CheatsheetView({
         }
       `}</style>
 
+      {guestMode && (
+        <div className="print:hidden">
+          <GuestBanner />
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
         <Link
-          href="/rankings"
+          href={guestMode ? "/rankings/guest" : "/rankings"}
           className="text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
         >
           ← Back to rankings

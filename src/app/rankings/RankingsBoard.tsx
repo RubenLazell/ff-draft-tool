@@ -361,14 +361,12 @@ export function RankingsBoard({
           >
             Head-to-head
           </Link>
-          {!guestMode && (
-            <button
-              onClick={() => setShowCheatsheetPicker(true)}
-              className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
-            >
-              Create printable draft cheatsheet
-            </button>
-          )}
+          <button
+            onClick={() => setShowCheatsheetPicker(true)}
+            className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+          >
+            Create printable draft cheatsheet
+          </button>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -380,7 +378,7 @@ export function RankingsBoard({
       </div>
 
       {showCheatsheetPicker && (
-        <CheatsheetFormatPicker onClose={() => setShowCheatsheetPicker(false)} />
+        <CheatsheetFormatPicker onClose={() => setShowCheatsheetPicker(false)} guestMode={guestMode} />
       )}
 
       <div className="mb-3 flex flex-wrap gap-2">
@@ -852,8 +850,9 @@ function PlayerDetailsPanel({
   );
 }
 
-function CheatsheetFormatPicker({ onClose }: { onClose: () => void }) {
+function CheatsheetFormatPicker({ onClose, guestMode }: { onClose: () => void; guestMode: boolean }) {
   if (typeof document === "undefined") return null;
+  const base = guestMode ? "/rankings/cheatsheet/guest" : "/rankings/cheatsheet";
 
   return createPortal(
     <>
@@ -878,7 +877,7 @@ function CheatsheetFormatPicker({ onClose }: { onClose: () => void }) {
           {FORMATS.map((f) => (
             <Link
               key={f}
-              href={`/rankings/cheatsheet?format=${f}`}
+              href={`${base}?format=${f}`}
               className="rounded-md border border-black/[.08] px-3 py-2 text-center text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-white/10"
             >
               {FORMAT_LABELS[f]}

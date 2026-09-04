@@ -7,38 +7,52 @@ import type { TeamResult } from "@/lib/leagueScoring";
 import { UNRANKED_SLOT_TYPES } from "@/lib/leagueScoring";
 import { ESPN_UNMATCHED_PREFIX } from "@/lib/espnMatching";
 import { POSITION_ORDER, POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
+import { GuestBanner } from "@/app/rankings/GuestBanner";
 
 function positionColor(position: string) {
   return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
 }
 
-export function LeagueDetailView({
-  leagueRowId,
-  leagueName,
-  results,
-  format,
-  formats,
-  formatLabels,
-}: {
-  leagueRowId: string;
+// Two ways to reach this view: a persisted league (leagueRowId, format
+// switch navigates via Link to /leagues/[id]?format=), or a guest's
+// stateless preview (onFormatChange, format switch re-runs the preview
+// action with nothing to navigate to — see /leagues/guest).
+type LeagueDetailViewProps = {
   leagueName: string;
   results: TeamResult[];
   format: Format;
   formats: readonly Format[];
   formatLabels: Record<Format, string>;
-}) {
+} & (
+  | { leagueRowId: string; guestMode?: false; onFormatChange?: undefined; onReset?: undefined }
+  | { leagueRowId?: undefined; guestMode: true; onFormatChange: (format: Format) => void; onReset: () => void }
+);
+
+export function LeagueDetailView(props: LeagueDetailViewProps) {
+  const { leagueName, results, format, formats, formatLabels, guestMode } = props;
   const [expandedRosterId, setExpandedRosterId] = useState<number | null>(null);
   const maxScore = Math.max(1, ...results.map((t) => t.score));
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
       <div className="mx-auto w-full max-w-2xl">
-        <Link
-          href="/leagues"
-          className="mb-4 inline-block text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
-        >
-          ← Back to leagues
-        </Link>
+        {guestMode && <GuestBanner />}
+        {guestMode ? (
+          <button
+            type="button"
+            onClick={props.onReset}
+            className="mb-4 inline-block text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
+          >
+            ← Search another league
+          </button>
+        ) : (
+          <Link
+            href="/leagues"
+            className="mb-4 inline-block text-sm font-medium text-zinc-600 hover:underline dark:text-zinc-400"
+          >
+            ← Back to leagues
+          </Link>
+        )}
         <h1 className="mb-1 text-xl font-semibold text-black sm:text-2xl dark:text-zinc-50">
           {leagueName}
         </h1>
@@ -49,19 +63,34 @@ export function LeagueDetailView({
         </p>
 
         <div className="mb-4 flex flex-wrap gap-2">
-          {formats.map((f) => (
-            <Link
-              key={f}
-              href={`/leagues/${leagueRowId}?format=${f}`}
-              className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
-                format === f
-                  ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
-                  : "border-black/[.08] text-black hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
-              }`}
-            >
-              {formatLabels[f]}
-            </Link>
-          ))}
+          {formats.map((f) =>
+            guestMode ? (
+              <button
+                key={f}
+                type="button"
+                onClick={() => props.onFormatChange(f)}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                  format === f
+                    ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
+                    : "border-black/[.08] text-black hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+                }`}
+              >
+                {formatLabels[f]}
+              </button>
+            ) : (
+              <Link
+                key={f}
+                href={`/leagues/${props.leagueRowId}?format=${f}`}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
+                  format === f
+                    ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
+                    : "border-black/[.08] text-black hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+                }`}
+              >
+                {formatLabels[f]}
+              </Link>
+            )
+          )}
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">

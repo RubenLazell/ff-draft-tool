@@ -1,8 +1,12 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 import { fetchSleeperLeague } from "@/lib/sleeper";
 import { fetchEspnLeague, EspnAuthRequiredError } from "@/lib/espn";
+import { fetchAndResolveLeague } from "@/lib/leagueImport";
+import { getDefaultRankings, type Format } from "@/lib/rankings";
+import { scoreLeagueTeams, type TeamResult } from "@/lib/leagueScoring";
 
 export async function addLeague(leagueId: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
@@ -83,6 +87,40 @@ export async function addEspnLeague(
     return { error: error.message };
   }
   return { error: null };
+}
+
+export type LeaguePreview =
+  | { error: string; leagueName?: undefined; results?: undefined }
+  | { error: null; leagueName: string; results: TeamResult[] };
+
+// Guest-accessible: no auth, nothing persisted. Scored against default
+// consensus rankings rather than a signed-in user's own — reads run
+// through the service-role client for the same reason guest mode's
+// rankings board does (RLS blocks anon reads on `players`/
+// `consensus_rankings`, and there's no session to read `user_leagues`
+// with anyway since nothing gets saved here).
+export async function previewLeague(
+  platform: "SLEEPER" | "ESPN",
+  leagueId: string,
+  format: Format,
+  season?: string,
+  swid?: string,
+  espnS2?: string
+): Promise<LeaguePreview> {
+  const trimmedId = leagueId.trim();
+  if (!trimmedId) {
+    return { error: `Enter a ${platform === "SLEEPER" ? "Sleeper" : "ESPN"} league ID.` };
+  }
+
+  const supabase = createServiceRoleClient();
+  const credentials = swid?.trim() && espnS2?.trim() ? { swid: swid.trim(), espnS2: espnS2.trim() } : undefined;
+
+  const fetchResult = await fetchAndResolveLeague(supabase, platform, trimmedId, season, credentials);
+  if (fetchResult.error !== null) return { error: fetchResult.error };
+
+  const rankings = await getDefaultRankings(supabase, format);
+  const results = scoreLeagueTeams(fetchResult.resolved.league, fetchResult.resolved.rosters, rankings);
+  return { error: null, leagueName: fetchResult.resolved.league.name, results };
 }
 
 export async function removeLeague(id: string): Promise<{ error: string | null }> {

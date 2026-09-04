@@ -55,7 +55,7 @@ export async function Navbar() {
         ) : (
           <>
             <Link
-              href="/rankings/guest"
+              href="/guest"
               className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
             >
               Try as guest
