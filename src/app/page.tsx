@@ -94,6 +94,23 @@ export default async function Home() {
                 Start comparing →
               </Link>
             </div>
+
+            <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                League Import
+              </h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Paste a Sleeper league ID to see every team ranked by
+                strength — judged against your own rankings, not a generic
+                consensus.
+              </p>
+              <Link
+                href="/leagues"
+                className="text-sm font-medium underline text-black dark:text-zinc-50"
+              >
+                Import a league →
+              </Link>
+            </div>
           </div>
         </div>
       ) : (

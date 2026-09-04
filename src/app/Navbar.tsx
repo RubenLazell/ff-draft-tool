@@ -32,6 +32,12 @@ export async function Navbar() {
               Head-to-head
             </Link>
             <Link
+              href="/leagues"
+              className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
+            >
+              Leagues
+            </Link>
+            <Link
               href="/extension"
               className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
             >
