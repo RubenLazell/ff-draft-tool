@@ -115,6 +115,31 @@
     return ensurePanel().querySelector(".fftool-content");
   }
 
+  function isPanelUnusable(rect) {
+    // A saved position/size can end up completely invisible — dragged
+    // fully offscreen (dragging is intentionally unclamped, see above) or
+    // collapsed to ~0 size by a stale ResizeObserver callback. Only
+    // flagged when the *whole* box is unusable, not just hanging off an
+    // edge, which unclamped dragging still allows freely.
+    return (
+      rect.width <= 1 ||
+      rect.height <= 1 ||
+      rect.right <= 0 ||
+      rect.bottom <= 0 ||
+      rect.left >= window.innerWidth ||
+      rect.top >= window.innerHeight
+    );
+  }
+
+  function resetPanelBoxStyle(panel) {
+    for (const prop of ["left", "top", "right", "bottom", "width", "height"]) {
+      panel.style.removeProperty(prop);
+    }
+    const rect = panel.getBoundingClientRect();
+    panel.style.left = `${rect.left}px`;
+    panel.style.right = "auto";
+  }
+
   // Restores a saved position/size, or — if there's none yet — pins the
   // CSS-default right-anchored position to an explicit `left` instead.
   // That's needed purely so the native resize handle (bottom-right corner,
@@ -122,19 +147,22 @@
   // with `right` still set, growing `width` would keep the right edge
   // fixed and push the left edge further left, which looks broken.
   //
-  // Position is intentionally unclamped — dragging is free to place the
-  // panel anywhere, including behind a site's own header if you park it
-  // there; drag it back out yourself rather than the tool refusing to let
-  // you go there. max-height/max-width in content.css (not position) is
-  // what keeps the box itself from growing past the viewport.
+  // Position is intentionally unclamped during dragging — the panel is
+  // free to end up anywhere, including behind a site's own header — but a
+  // *restored* position that's entirely unusable (see isPanelUnusable)
+  // self-heals here instead of replaying invisibly forever.
   function initPanelBox(panel) {
     chrome.storage.local.get("panelBox", ({ panelBox }) => {
-      if (panelBox) {
-        Object.assign(panel.style, panelBox, { right: "auto", bottom: "auto" });
-      } else {
-        const rect = panel.getBoundingClientRect();
-        panel.style.left = `${rect.left}px`;
-        panel.style.right = "auto";
+      if (panelBox) Object.assign(panel.style, panelBox, { right: "auto", bottom: "auto" });
+
+      if (!panelBox) {
+        resetPanelBoxStyle(panel);
+      } else if (isPanelUnusable(panel.getBoundingClientRect())) {
+        // Self-heal rather than replaying the same broken position on
+        // every future load — same escape hatch as the popup's "Reset
+        // panel position" button, just automatic.
+        chrome.storage.local.remove("panelBox");
+        resetPanelBoxStyle(panel);
       }
       // ResizeObserver always fires once immediately on observe(), before
       // any real user resize — saving that passive callback would record

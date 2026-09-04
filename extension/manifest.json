@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FF Draft Tool — Live Draft Assistant",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Shows your next-best available players by rank and position while drafting live on ESPN or Sleeper Fantasy Football.",
   "permissions": ["storage"],
   "host_permissions": ["https://oyfaaevlfhpklpqltbhr.supabase.co/*"],
