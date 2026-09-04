@@ -11,12 +11,13 @@ const SUPABASE_ANON_KEY = "sb_publishable_u8kvLJbGR1zNFX2NmMas9g_kxdczole";
 
 // Mirrors src/lib/rankings.ts — duplicated here since this extension has
 // no build step and can't import from the Next.js TS project.
-const FORMATS = ["PPR", "HALF_PPR", "STANDARD", "SUPERFLEX"];
+const FORMATS = ["PPR", "HALF_PPR", "STANDARD", "SUPERFLEX", "DYNASTY"];
 const FORMAT_LABELS = {
   PPR: "PPR",
   HALF_PPR: "Half-PPR",
   STANDARD: "Standard",
   SUPERFLEX: "Superflex",
+  DYNASTY: "Dynasty",
 };
 
 const POSITION_ORDER = ["QB", "RB", "WR", "TE", "K", "DEF"];

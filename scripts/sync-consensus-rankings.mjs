@@ -19,12 +19,16 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 }
 
 // DB format -> FFC's URL path segment. 2qb is Superflex (verified live:
-// QBs rank sharply higher, e.g. Josh Allen #1 overall).
+// QBs rank sharply higher, e.g. Josh Allen #1 overall). dynasty is a
+// separate ADP pool entirely (startup dynasty drafts), not a scoring
+// variant — verified live: young WR/RB assets (Ja'Marr Chase, Jahmyr
+// Gibbs) rank far above veteran QBs, the opposite of redraft.
 const FORMATS = {
   PPR: "ppr",
   HALF_PPR: "half-ppr",
   STANDARD: "standard",
   SUPERFLEX: "2qb",
+  DYNASTY: "dynasty",
 };
 
 const COMBINING_MARKS = /[̀-ͯ]/g;

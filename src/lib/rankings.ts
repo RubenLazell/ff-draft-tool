@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export const FORMATS = ["PPR", "HALF_PPR", "STANDARD", "SUPERFLEX"] as const;
+export const FORMATS = ["PPR", "HALF_PPR", "STANDARD", "SUPERFLEX", "DYNASTY"] as const;
 export type Format = (typeof FORMATS)[number];
 
 export function isFormat(value: string): value is Format {
@@ -12,6 +12,7 @@ export const FORMAT_LABELS: Record<Format, string> = {
   HALF_PPR: "Half-PPR",
   STANDARD: "Standard",
   SUPERFLEX: "Superflex",
+  DYNASTY: "Dynasty",
 };
 
 export type RankedPlayer = {
