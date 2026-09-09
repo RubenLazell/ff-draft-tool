@@ -70,6 +70,7 @@ export default async function MatchupsPage() {
     .map((c) => {
       const result = c.result as Extract<MatchupResult, { error: null }>;
       return {
+        leagueRowId: c.leagueRowId,
         leagueName: c.leagueName,
         myTeamName: result.myTeam.teamName,
         opponentTeamName: result.opponent!.teamName,

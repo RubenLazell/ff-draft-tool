@@ -14,6 +14,7 @@ export type RosterPlayerWithSlot = PositionRanked & { isStarter: boolean };
 
 export type GamePlayerEntry = {
   player: PositionRanked;
+  leagueRowId: string;
   leagueName: string;
   role: "mine" | "opponent";
   opponentTeamName: string; // the fantasy team on the other side of this entry's league matchup, for context
@@ -27,6 +28,7 @@ export type GameGroup = {
 
 export function groupPlayersByGame(
   leagueMatchups: {
+    leagueRowId: string;
     leagueName: string;
     myTeamName: string;
     opponentTeamName: string;
@@ -42,7 +44,13 @@ export function groupPlayersByGame(
   }
 
   const groups = new Map<string, GameGroup>();
-  function addEntry(player: RosterPlayerWithSlot, leagueName: string, role: "mine" | "opponent", opponentTeamName: string) {
+  function addEntry(
+    player: RosterPlayerWithSlot,
+    leagueRowId: string,
+    leagueName: string,
+    role: "mine" | "opponent",
+    opponentTeamName: string
+  ) {
     const team = normalizeTeamCode(player.team);
     if (!team) return; // free agent / no team on record
     const game = gameByTeam.get(team);
@@ -53,12 +61,12 @@ export function groupPlayersByGame(
       group = { game, entries: [] };
       groups.set(game.gameId, group);
     }
-    group.entries.push({ player, leagueName, role, opponentTeamName, isStarter: player.isStarter });
+    group.entries.push({ player, leagueRowId, leagueName, role, opponentTeamName, isStarter: player.isStarter });
   }
 
   for (const league of leagueMatchups) {
-    for (const p of league.myRoster) addEntry(p, league.leagueName, "mine", league.opponentTeamName);
-    for (const p of league.opponentRoster) addEntry(p, league.leagueName, "opponent", league.myTeamName);
+    for (const p of league.myRoster) addEntry(p, league.leagueRowId, league.leagueName, "mine", league.opponentTeamName);
+    for (const p of league.opponentRoster) addEntry(p, league.leagueRowId, league.leagueName, "opponent", league.myTeamName);
   }
 
   return [...groups.values()].sort(
