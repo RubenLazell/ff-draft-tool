@@ -103,10 +103,10 @@ export function MatchupCard({
         <>
           <div className="mb-3 flex items-center justify-between gap-2 text-sm">
             <span className="font-medium text-black dark:text-zinc-50">{myTeam.teamName}</span>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">Projected</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">Roster strength</span>
             <span className="font-medium text-black dark:text-zinc-50">{opponent.teamName}</span>
           </div>
-          <div className="mb-4 flex items-center justify-center gap-3 text-sm">
+          <div className="mb-1 flex items-center justify-center gap-3 text-sm">
             <span
               className={`font-semibold tabular-nums ${mine.score >= theirs.score ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
             >
@@ -119,6 +119,10 @@ export function MatchupCard({
               {theirs.score.toFixed(1)}
             </span>
           </div>
+          <p className="mb-4 text-center text-xs text-zinc-400 dark:text-zinc-600">
+            Not a points projection — the same Value Over Replacement score League Import uses, judged
+            against your own rankings.
+          </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <RosterList starters={mine.lineup.starters.map((s) => s.player).filter((p): p is PositionRanked => p != null)} bench={mine.lineup.bench} />
             <RosterList starters={theirs.lineup.starters.map((s) => s.player).filter((p): p is PositionRanked => p != null)} bench={theirs.lineup.bench} />

@@ -2,8 +2,16 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateUserRankings } from "@/lib/rankings";
-import { fetchCurrentMatchup } from "@/lib/leagueImport";
-import { MatchupCard } from "./MatchupCard";
+import { fetchCurrentMatchup, type MatchupResult } from "@/lib/leagueImport";
+import { withPositionRanks, resolveRosterPlayers } from "@/lib/leagueScoring";
+import { fetchSleeperCurrentWeek } from "@/lib/sleeper";
+import { fetchNflSchedule } from "@/lib/nflSchedule";
+import { groupPlayersByGame, type GameGroup } from "@/lib/matchupsByGame";
+import { MatchupsView } from "./MatchupsView";
+
+function isSuccess(result: MatchupResult): result is Extract<MatchupResult, { error: null }> {
+  return result.error === null;
+}
 
 export default async function MatchupsPage() {
   const supabase = await createClient();
@@ -37,6 +45,33 @@ export default async function MatchupsPage() {
     })
   );
 
+  // Re-group the same matchup data by real NFL game instead of by league —
+  // "which of my/my opponents' players are in the Patriots @ Seahawks game."
+  const ranked = withPositionRanks(rankings);
+  const rankingsById = new Map(ranked.map((p) => [p.playerId, p]));
+  const leagueMatchupsForGrouping = cards
+    .filter((c) => isSuccess(c.result) && c.result.opponent)
+    .map((c) => {
+      const result = c.result as Extract<MatchupResult, { error: null }>;
+      return {
+        leagueName: c.leagueName,
+        myTeamName: result.myTeam.teamName,
+        opponentTeamName: result.opponent!.teamName,
+        myRoster: resolveRosterPlayers(result.myTeam.playerIds, rankingsById).resolved,
+        opponentRoster: resolveRosterPlayers(result.opponent!.playerIds, rankingsById).resolved,
+      };
+    });
+
+  let gameGroups: GameGroup[] = [];
+  let scheduleError: string | null = null;
+  try {
+    const week = await fetchSleeperCurrentWeek();
+    const schedule = await fetchNflSchedule(week, String(new Date().getFullYear()));
+    gameGroups = groupPlayersByGame(leagueMatchupsForGrouping, schedule);
+  } catch {
+    scheduleError = "Couldn't load the NFL schedule right now — try again later.";
+  }
+
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
       <div className="mx-auto w-full max-w-3xl">
@@ -48,7 +83,7 @@ export default async function MatchupsPage() {
         </Link>
         <h1 className="mb-1 text-xl font-semibold text-black sm:text-2xl dark:text-zinc-50">My Matchups</h1>
         <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-          This week&apos;s game in every league you&apos;ve set a team for, scored with your own rankings (PPR).
+          This week&apos;s games in every league you&apos;ve set a team for, scored with your own rankings (PPR).
         </p>
 
         {cards.length === 0 ? (
@@ -60,11 +95,7 @@ export default async function MatchupsPage() {
             and pick your team in each one.
           </p>
         ) : (
-          <div className="flex flex-col gap-4">
-            {cards.map((card) => (
-              <MatchupCard key={card.leagueRowId} leagueName={card.leagueName} result={card.result} rankings={rankings} />
-            ))}
-          </div>
+          <MatchupsView cards={cards} rankings={rankings} gameGroups={gameGroups} scheduleError={scheduleError} />
         )}
       </div>
     </div>
