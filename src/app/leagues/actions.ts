@@ -136,6 +136,61 @@ export async function previewLeague(
   };
 }
 
+export type TeamNamesResult = { error: string } | { error: null; teams: { rosterId: number; teamName: string }[] };
+
+// Powers the "set your team" picker on /leagues without needing new fetch
+// logic — reuses the exact same Sleeper/ESPN branching addLeague/addEspnLeague
+// already validated the league against, just to list team names this time.
+export async function getTeamNames(leagueRowId: string): Promise<TeamNamesResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: savedLeague } = await supabase
+    .from("user_leagues")
+    .select("platform, league_id, season, espn_swid, espn_s2")
+    .eq("id", leagueRowId)
+    .eq("user_id", user.id)
+    .single();
+  if (!savedLeague) return { error: "League not found." };
+
+  const credentials =
+    savedLeague.espn_swid && savedLeague.espn_s2
+      ? { swid: savedLeague.espn_swid, espnS2: savedLeague.espn_s2 }
+      : undefined;
+  const fetchResult = await fetchAndResolveLeague(
+    supabase,
+    savedLeague.platform,
+    savedLeague.league_id,
+    savedLeague.season,
+    credentials
+  );
+  if (fetchResult.error !== null) return { error: fetchResult.error };
+
+  return {
+    error: null,
+    teams: fetchResult.resolved.rosters.map((r) => ({ rosterId: r.rosterId, teamName: r.teamName })),
+  };
+}
+
+export async function setMyTeam(leagueRowId: string, rosterId: number | null): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { error } = await supabase
+    .from("user_leagues")
+    .update({ my_roster_id: rosterId })
+    .eq("id", leagueRowId)
+    .eq("user_id", user.id);
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
 export async function removeLeague(id: string): Promise<{ error: string | null }> {
   const supabase = await createClient();
   const {

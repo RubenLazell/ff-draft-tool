@@ -86,3 +86,30 @@ export async function fetchSleeperUsers(leagueId: string): Promise<SleeperUser[]
     teamName: u.metadata?.team_name ?? null,
   }));
 }
+
+// The current NFL week — league-independent, same for every Sleeper league.
+export async function fetchSleeperCurrentWeek(): Promise<number> {
+  const data = (await sleeperFetch("/state/nfl")) as { week: number } | null;
+  return data?.week ?? 1;
+}
+
+export type SleeperMatchupEntry = {
+  rosterId: number;
+  matchupId: number | null;
+  playerIds: string[];
+};
+
+// One entry per roster for a given week; two entries sharing the same
+// matchupId are playing each other. `playerIds` is that week's roster
+// snapshot, not necessarily identical to the roster's current state if
+// there's been a waiver move since.
+export async function fetchSleeperMatchups(leagueId: string, week: number): Promise<SleeperMatchupEntry[]> {
+  const data = (await sleeperFetch(`/league/${leagueId}/matchups/${week}`)) as
+    | { roster_id: number; matchup_id: number | null; players: string[] | null }[]
+    | null;
+  return (data ?? []).map((m) => ({
+    rosterId: m.roster_id,
+    matchupId: m.matchup_id,
+    playerIds: m.players ?? [],
+  }));
+}

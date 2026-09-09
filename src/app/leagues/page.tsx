@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AddLeagueForm } from "./AddLeagueForm";
+import { TeamPickerButton } from "./TeamPickerButton";
 import { removeLeagueFormAction } from "./actions";
 
 export default async function LeaguesPage() {
@@ -13,9 +14,11 @@ export default async function LeaguesPage() {
 
   const { data: leagues } = await supabase
     .from("user_leagues")
-    .select("id, league_id, league_name, platform")
+    .select("id, league_id, league_name, platform, my_roster_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  const hasAnyTeamSet = leagues?.some((l) => l.my_roster_id != null) ?? false;
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
@@ -27,6 +30,15 @@ export default async function LeaguesPage() {
           Import a Sleeper league to see every team ranked using your own rankings.
         </p>
 
+        {hasAnyTeamSet && (
+          <Link
+            href="/leagues/matchups"
+            className="mb-4 inline-block text-sm font-medium underline text-black dark:text-zinc-50"
+          >
+            My Matchups →
+          </Link>
+        )}
+
         <div className="mb-8 rounded-lg border border-black/[.08] bg-white p-4 dark:border-white/[.145] dark:bg-zinc-950">
           <AddLeagueForm />
         </div>
@@ -36,22 +48,25 @@ export default async function LeaguesPage() {
             {leagues.map((league) => (
               <li
                 key={league.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-black/[.08] bg-white px-4 py-3 dark:border-white/[.145] dark:bg-zinc-950"
+                className="flex flex-col gap-2 rounded-lg border border-black/[.08] bg-white px-4 py-3 dark:border-white/[.145] dark:bg-zinc-950"
               >
-                <Link
-                  href={`/leagues/${league.id}`}
-                  className="min-w-0 flex-1 truncate font-medium text-black hover:underline dark:text-zinc-50"
-                >
-                  {league.league_name ?? league.league_id}
-                </Link>
-                <form action={removeLeagueFormAction.bind(null, league.id)}>
-                  <button
-                    type="submit"
-                    className="shrink-0 text-sm text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
+                <div className="flex items-center justify-between gap-2">
+                  <Link
+                    href={`/leagues/${league.id}`}
+                    className="min-w-0 flex-1 truncate font-medium text-black hover:underline dark:text-zinc-50"
                   >
-                    Remove
-                  </button>
-                </form>
+                    {league.league_name ?? league.league_id}
+                  </Link>
+                  <form action={removeLeagueFormAction.bind(null, league.id)}>
+                    <button
+                      type="submit"
+                      className="shrink-0 text-sm text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
+                    >
+                      Remove
+                    </button>
+                  </form>
+                </div>
+                <TeamPickerButton leagueRowId={league.id} myRosterId={league.my_roster_id} />
               </li>
             ))}
           </ul>

@@ -83,6 +83,8 @@ export type EspnLeague = {
   name: string;
   rosterPositions: string[]; // flattened from lineupSlotCounts, same shape as Sleeper's
   teams: EspnTeam[];
+  currentMatchupPeriodId: number;
+  schedule: { matchupPeriodId: number; awayTeamId: number; homeTeamId: number | null }[];
 };
 
 // Canonical display order when flattening lineupSlotCounts (a count map,
@@ -104,7 +106,7 @@ export async function fetchEspnLeague(
   // homepage's HTML instead of hitting the actual API — even with valid
   // cookies for a real league. `lm-api-reads.fantasy.espn.com` is the host
   // that actually serves the JSON.
-  const url = `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leagues/${leagueId}?view=mTeam&view=mRoster&view=mSettings`;
+  const url = `https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leagues/${leagueId}?view=mTeam&view=mRoster&view=mSettings&view=mMatchup`;
   const res = await fetch(url, { headers });
 
   if (res.status === 404) return null;
@@ -118,6 +120,12 @@ export async function fetchEspnLeague(
 
   const data = (await res.json()) as {
     settings?: { name?: string; rosterSettings?: { lineupSlotCounts?: Record<string, number> } };
+    status?: { currentMatchupPeriod?: number };
+    schedule?: {
+      matchupPeriodId: number;
+      away?: { teamId: number };
+      home?: { teamId: number };
+    }[];
     teams?: {
       id: number;
       name?: string;
@@ -166,11 +174,21 @@ export async function fetchEspnLeague(
     };
   });
 
+  const schedule = (data.schedule ?? [])
+    .filter((m) => m.away?.teamId != null)
+    .map((m) => ({
+      matchupPeriodId: m.matchupPeriodId,
+      awayTeamId: m.away!.teamId,
+      homeTeamId: m.home?.teamId ?? null,
+    }));
+
   return {
     leagueId,
     season,
     name: data.settings?.name || `ESPN League ${leagueId}`,
     rosterPositions,
     teams,
+    currentMatchupPeriodId: data.status?.currentMatchupPeriod ?? 1,
+    schedule,
   };
 }
