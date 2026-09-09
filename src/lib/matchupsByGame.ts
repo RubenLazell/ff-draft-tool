@@ -10,11 +10,14 @@ import { normalizeTeamCode } from "@/lib/normalizeName";
 import type { NflGame } from "@/lib/nflSchedule";
 import type { PositionRanked } from "@/lib/leagueScoring";
 
+export type RosterPlayerWithSlot = PositionRanked & { isStarter: boolean };
+
 export type GamePlayerEntry = {
   player: PositionRanked;
   leagueName: string;
   role: "mine" | "opponent";
   opponentTeamName: string; // the fantasy team on the other side of this entry's league matchup, for context
+  isStarter: boolean;
 };
 
 export type GameGroup = {
@@ -23,7 +26,13 @@ export type GameGroup = {
 };
 
 export function groupPlayersByGame(
-  leagueMatchups: { leagueName: string; myTeamName: string; opponentTeamName: string; myRoster: PositionRanked[]; opponentRoster: PositionRanked[] }[],
+  leagueMatchups: {
+    leagueName: string;
+    myTeamName: string;
+    opponentTeamName: string;
+    myRoster: RosterPlayerWithSlot[];
+    opponentRoster: RosterPlayerWithSlot[];
+  }[],
   schedule: NflGame[]
 ): GameGroup[] {
   const gameByTeam = new Map<string, NflGame>();
@@ -33,7 +42,7 @@ export function groupPlayersByGame(
   }
 
   const groups = new Map<string, GameGroup>();
-  function addEntry(player: PositionRanked, leagueName: string, role: "mine" | "opponent", opponentTeamName: string) {
+  function addEntry(player: RosterPlayerWithSlot, leagueName: string, role: "mine" | "opponent", opponentTeamName: string) {
     const team = normalizeTeamCode(player.team);
     if (!team) return; // free agent / no team on record
     const game = gameByTeam.get(team);
@@ -44,7 +53,7 @@ export function groupPlayersByGame(
       group = { game, entries: [] };
       groups.set(game.gameId, group);
     }
-    group.entries.push({ player, leagueName, role, opponentTeamName });
+    group.entries.push({ player, leagueName, role, opponentTeamName, isStarter: player.isStarter });
   }
 
   for (const league of leagueMatchups) {

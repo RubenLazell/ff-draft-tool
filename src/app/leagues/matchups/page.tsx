@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getOrCreateUserRankings } from "@/lib/rankings";
-import { fetchCurrentMatchup, type MatchupResult } from "@/lib/leagueImport";
-import { withPositionRanks, resolveRosterPlayers } from "@/lib/leagueScoring";
+import { fetchCurrentMatchup, type MatchupResult, type ResolvedRosterEntry } from "@/lib/leagueImport";
+import { withPositionRanks, resolveRosterPlayers, buildOptimalLineup, type PositionRanked } from "@/lib/leagueScoring";
 import { fetchSleeperCurrentWeek } from "@/lib/sleeper";
 import { fetchNflSchedule } from "@/lib/nflSchedule";
-import { groupPlayersByGame, type GameGroup } from "@/lib/matchupsByGame";
+import { groupPlayersByGame, type GameGroup, type RosterPlayerWithSlot } from "@/lib/matchupsByGame";
 import { MatchupsView } from "./MatchupsView";
 
 function isSuccess(result: MatchupResult): result is Extract<MatchupResult, { error: null }> {
@@ -47,8 +47,24 @@ export default async function MatchupsPage() {
 
   // Re-group the same matchup data by real NFL game instead of by league —
   // "which of my/my opponents' players are in the Patriots @ Seahawks game."
+  // Tags each player with whether they're in this app's own optimal
+  // lineup (not either platform's actual weekly starter choice, same as
+  // MatchupCard/League Import) so the by-game view can default to
+  // starters-only with bench tucked behind a toggle.
   const ranked = withPositionRanks(rankings);
   const rankingsById = new Map(ranked.map((p) => [p.playerId, p]));
+
+  function tagWithStarterStatus(team: ResolvedRosterEntry, rosterPositions: string[]): RosterPlayerWithSlot[] {
+    const { resolved } = resolveRosterPlayers(team.playerIds, rankingsById);
+    const lineup = buildOptimalLineup(rosterPositions, resolved);
+    const starters = lineup.starters
+      .map((s) => s.player)
+      .filter((p): p is PositionRanked => p != null)
+      .map((p) => ({ ...p, isStarter: true }));
+    const bench = lineup.bench.map((p) => ({ ...p, isStarter: false }));
+    return [...starters, ...bench];
+  }
+
   const leagueMatchupsForGrouping = cards
     .filter((c) => isSuccess(c.result) && c.result.opponent)
     .map((c) => {
@@ -57,8 +73,8 @@ export default async function MatchupsPage() {
         leagueName: c.leagueName,
         myTeamName: result.myTeam.teamName,
         opponentTeamName: result.opponent!.teamName,
-        myRoster: resolveRosterPlayers(result.myTeam.playerIds, rankingsById).resolved,
-        opponentRoster: resolveRosterPlayers(result.opponent!.playerIds, rankingsById).resolved,
+        myRoster: tagWithStarterStatus(result.myTeam, result.league.rosterPositions),
+        opponentRoster: tagWithStarterStatus(result.opponent!, result.league.rosterPositions),
       };
     });
 

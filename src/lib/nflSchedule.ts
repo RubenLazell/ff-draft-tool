@@ -12,7 +12,36 @@ export type NflGame = {
   kickoff: string; // ISO date
   homeTeam: string;
   awayTeam: string;
+  slate: string; // broadcast slate label, e.g. "Sunday Early"
 };
+
+// Standard NFL broadcast slates, bucketed by day/time in US Eastern (the
+// conventional NFL broadcast timezone) regardless of the server's own
+// timezone. "Sunday Morning" covers the occasional 9:30am ET
+// international window; everything else follows the usual TV windows.
+function getSlate(kickoffIso: string): string {
+  const date = new Date(kickoffIso);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "numeric",
+    hour12: false,
+  }).formatToParts(date);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0") % 24;
+
+  if (weekday === "Thu") return "Thursday Night";
+  if (weekday === "Fri") return "Friday";
+  if (weekday === "Sat") return "Saturday";
+  if (weekday === "Mon") return "Monday Night";
+  if (weekday === "Sun") {
+    if (hour < 13) return "Sunday Morning";
+    if (hour < 16) return "Sunday Early";
+    if (hour < 20) return "Sunday Late";
+    return "Sunday Night";
+  }
+  return "Other";
+}
 
 export async function fetchNflSchedule(week: number, season: string): Promise<NflGame[]> {
   const res = await fetch(
@@ -37,7 +66,14 @@ export async function fetchNflSchedule(week: number, season: string): Promise<Nf
       const homeTeam = normalizeTeamCode(home?.team.abbreviation);
       const awayTeam = normalizeTeamCode(away?.team.abbreviation);
       if (!homeTeam || !awayTeam) return null;
-      return { gameId: event.id, shortName: event.shortName, kickoff: event.date, homeTeam, awayTeam };
+      return {
+        gameId: event.id,
+        shortName: event.shortName,
+        kickoff: event.date,
+        homeTeam,
+        awayTeam,
+        slate: getSlate(event.date),
+      };
     })
     .filter((g): g is NflGame => g != null);
 }
