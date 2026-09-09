@@ -30,61 +30,79 @@ function EntryRow({ entry, showLeague }: { entry: GamePlayerEntry; showLeague: b
   );
 }
 
-// Groups entries by league first (a clear sub-header per league, rather
-// than a small trailing label per row) so it's obvious at a glance which
-// league each block of players belongs to when a game spans more than one
-// of the user's leagues. Within each league, defaults to starters only —
-// bench tucked behind a dropdown, same pattern as MatchupCard.
-function EntryColumn({ title, entries }: { title: string; entries: GamePlayerEntry[] }) {
-  const byLeague = new Map<string, GamePlayerEntry[]>();
-  for (const entry of entries) {
-    const list = byLeague.get(entry.leagueName) ?? [];
-    list.push(entry);
-    byLeague.set(entry.leagueName, list);
-  }
-  const multiLeague = byLeague.size > 1;
+// One side (mine or theirs) of one league's players within a game.
+// Deliberately has no league header of its own — the caller renders one
+// league block spanning both sides at once, so "your players" and
+// "opponents' players" for that league land in the same row and stay
+// aligned regardless of how many starters/bench each side has.
+function LeagueSide({ entries }: { entries: GamePlayerEntry[] }) {
+  const starters = entries.filter((e) => e.isStarter);
+  const bench = entries.filter((e) => !e.isStarter);
+  return (
+    <div className="flex flex-col gap-1">
+      {starters.length === 0 ? (
+        <p className="text-sm italic text-zinc-400 dark:text-zinc-600">No starters</p>
+      ) : (
+        starters.map((entry, i) => <EntryRow key={`${entry.player.playerId}-${i}`} entry={entry} showLeague={false} />)
+      )}
+      {bench.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400">+{bench.length} bench</summary>
+          <div className="mt-1 flex flex-col gap-1">
+            {bench.map((entry, i) => (
+              <EntryRow key={`${entry.player.playerId}-${i}`} entry={entry} showLeague={false} />
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+// One game's full body: a shared "Your players" / "Opponents' players"
+// header, then one row per league (in the same order as the Leagues
+// filter pills) with both sides side by side — a league header spans the
+// row, and each side below it is independent, so leagues stay lined up
+// between columns even when one side has more starters/bench than the
+// other.
+function GameBody({
+  entries,
+  leagueOrder,
+}: {
+  entries: GamePlayerEntry[];
+  leagueOrder: { leagueRowId: string; leagueName: string }[];
+}) {
+  const presentLeagueIds = new Set(entries.map((e) => e.leagueRowId));
+  const leaguesInGame = leagueOrder.filter((l) => presentLeagueIds.has(l.leagueRowId));
+  const multiLeague = leaguesInGame.length > 1;
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</p>
-      {entries.length === 0 ? (
-        <p className="text-sm italic text-zinc-400 dark:text-zinc-600">None</p>
-      ) : (
-        [...byLeague.entries()].map(([leagueName, leagueEntries]) => {
-          const starters = leagueEntries.filter((e) => e.isStarter);
-          const bench = leagueEntries.filter((e) => !e.isStarter);
-          return (
-            <div key={leagueName} className="flex flex-col gap-1">
-              {multiLeague && (
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-                  {leagueName}
-                </p>
-              )}
-              {starters.length === 0 ? (
-                <p className="text-sm italic text-zinc-400 dark:text-zinc-600">No starters</p>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  {starters.map((entry, i) => (
-                    <EntryRow key={`${entry.player.playerId}-${i}`} entry={entry} showLeague={false} />
-                  ))}
-                </div>
-              )}
-              {bench.length > 0 && (
-                <details>
-                  <summary className="cursor-pointer text-xs text-zinc-500 dark:text-zinc-400">
-                    +{bench.length} bench
-                  </summary>
-                  <div className="mt-1 flex flex-col gap-1">
-                    {bench.map((entry, i) => (
-                      <EntryRow key={`${entry.player.playerId}-${i}`} entry={entry} showLeague={false} />
-                    ))}
-                  </div>
-                </details>
-              )}
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Your players
+        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          Opponents&apos; players
+        </p>
+      </div>
+      {leaguesInGame.map(({ leagueRowId, leagueName }) => {
+        const mine = entries.filter((e) => e.leagueRowId === leagueRowId && e.role === "mine");
+        const theirs = entries.filter((e) => e.leagueRowId === leagueRowId && e.role === "opponent");
+        return (
+          <div key={leagueRowId}>
+            {multiLeague && (
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
+                {leagueName}
+              </p>
+            )}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <LeagueSide entries={mine} />
+              <LeagueSide entries={theirs} />
             </div>
-          );
-        })
-      )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -115,6 +133,9 @@ export function MatchupsView({
   }
 
   const filteredCards = cards.filter((c) => enabledLeagueIds.has(c.leagueRowId));
+  // Same order as the Leagues filter pills, so a game spanning multiple
+  // leagues always lists them in one consistent order across every card.
+  const leagueOrder = cards.map((c) => ({ leagueRowId: c.leagueRowId, leagueName: c.leagueName }));
 
   const filteredGameGroups = useMemo(() => {
     return gameGroups
@@ -199,8 +220,6 @@ export function MatchupsView({
               <h2 className="text-sm font-semibold text-black dark:text-zinc-50">{slate}</h2>
               <div className="flex flex-col gap-3">
                 {games.map((group) => {
-                  const mine = group.entries.filter((e) => e.role === "mine");
-                  const theirs = group.entries.filter((e) => e.role === "opponent");
                   const kickoff = new Date(group.game.kickoff);
                   return (
                     <div
@@ -213,10 +232,7 @@ export function MatchupsView({
                           {kickoff.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}
                         </span>
                       </div>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <EntryColumn title="Your players" entries={mine} />
-                        <EntryColumn title="Opponents' players" entries={theirs} />
-                      </div>
+                      <GameBody entries={group.entries} leagueOrder={leagueOrder} />
                     </div>
                   );
                 })}
