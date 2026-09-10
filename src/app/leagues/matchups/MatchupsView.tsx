@@ -59,34 +59,34 @@ function LeagueSide({ entries }: { entries: GamePlayerEntry[] }) {
   );
 }
 
-// One game's full body: a shared "Your players" / "Opponents' players"
-// header, then one row per league (in the same order as the Leagues
-// filter pills) with both sides side by side — a league header spans the
-// row, and each side below it is independent, so leagues stay lined up
-// between columns even when one side has more starters/bench than the
-// other.
+export type LeagueOrderEntry = {
+  leagueRowId: string;
+  leagueName: string;
+  myTeamName: string;
+  opponentTeamName: string;
+};
+
+// One game's full body: one row per league (in the same order as the
+// Leagues filter pills) with both sides side by side, headed by the
+// actual team names for that league (not a generic "opponents' players"
+// label — a different game can mean a different opponent per league). A
+// league label spans the row, and each side below it is independent, so
+// leagues stay lined up between columns even when one side has more
+// starters/bench than the other.
 function GameBody({
   entries,
   leagueOrder,
 }: {
   entries: GamePlayerEntry[];
-  leagueOrder: { leagueRowId: string; leagueName: string }[];
+  leagueOrder: LeagueOrderEntry[];
 }) {
   const presentLeagueIds = new Set(entries.map((e) => e.leagueRowId));
   const leaguesInGame = leagueOrder.filter((l) => presentLeagueIds.has(l.leagueRowId));
   const multiLeague = leaguesInGame.length > 1;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Your players
-        </p>
-        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Opponents&apos; players
-        </p>
-      </div>
-      {leaguesInGame.map(({ leagueRowId, leagueName }) => {
+    <div className="flex flex-col gap-4">
+      {leaguesInGame.map(({ leagueRowId, leagueName, myTeamName, opponentTeamName }) => {
         const mine = entries.filter((e) => e.leagueRowId === leagueRowId && e.role === "mine");
         const theirs = entries.filter((e) => e.leagueRowId === leagueRowId && e.role === "opponent");
         return (
@@ -96,6 +96,10 @@ function GameBody({
                 {leagueName}
               </p>
             )}
+            <div className="mb-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <p className="truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{myTeamName}</p>
+              <p className="truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{opponentTeamName}</p>
+            </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <LeagueSide entries={mine} />
               <LeagueSide entries={theirs} />
@@ -135,7 +139,17 @@ export function MatchupsView({
   const filteredCards = cards.filter((c) => enabledLeagueIds.has(c.leagueRowId));
   // Same order as the Leagues filter pills, so a game spanning multiple
   // leagues always lists them in one consistent order across every card.
-  const leagueOrder = cards.map((c) => ({ leagueRowId: c.leagueRowId, leagueName: c.leagueName }));
+  const leagueOrder: LeagueOrderEntry[] = cards
+    .filter((c) => c.result.error === null && c.result.opponent)
+    .map((c) => {
+      const result = c.result as Extract<MatchupResult, { error: null }>;
+      return {
+        leagueRowId: c.leagueRowId,
+        leagueName: c.leagueName,
+        myTeamName: result.myTeam.teamName,
+        opponentTeamName: result.opponent!.teamName,
+      };
+    });
 
   const filteredGameGroups = useMemo(() => {
     return gameGroups
