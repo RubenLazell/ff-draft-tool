@@ -1,9 +1,8 @@
 import Link from "next/link";
 
-// Flip this to the real listing URL once the Chrome Web Store review
-// finishes (item id nddmcgfljljjbfkajallenamhibhafdp) — everything below
-// switches from "pending review" to a real install button automatically.
-const CHROME_STORE_URL: string | null = null;
+// Approved and live as of 2026-09-15.
+const CHROME_STORE_URL: string | null =
+  "https://chromewebstore.google.com/detail/ff-draft-tool-%E2%80%94-live-draf/nddmcgfljljjbfkajallenamhibhafdp";
 
 export const metadata = {
   title: "Chrome Extension — FF Draft Tool",
@@ -64,43 +63,45 @@ export default function ExtensionPage() {
           )}
         </section>
 
-        <section className="rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
-          <h2 className="mb-3 text-base font-semibold">
-            Manual install (while the Chrome Web Store review is pending)
-          </h2>
-          <ol className="list-decimal space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
-            <li>
-              Click <strong>Download extension (.zip)</strong> above to save{" "}
-              <code>ff-draft-tool-extension.zip</code>.
-            </li>
-            <li>
-              Unzip it somewhere you&apos;ll keep it (right-click the file →{" "}
-              <strong>Extract All</strong> on Windows, or double-click it on
-              Mac) — don&apos;t delete this folder afterward, Chrome loads
-              the extension from it directly.
-            </li>
-            <li>
-              Open Chrome and go to{" "}
-              <code className="rounded bg-zinc-100 px-1 py-0.5 dark:bg-zinc-800">
-                chrome://extensions
-              </code>
-              .
-            </li>
-            <li>
-              Turn on <strong>Developer mode</strong> — a toggle in the
-              top-right corner of that page.
-            </li>
-            <li>
-              Click <strong>Load unpacked</strong> (top-left) and select the
-              unzipped <code>extension</code> folder — the one that directly
-              contains a file named <code>manifest.json</code>.
-            </li>
-            <li>
-              The FF Draft Tool icon should now appear in your browser
-              toolbar. That&apos;s it — installed.
-            </li>
-          </ol>
-        </section>
+        {!CHROME_STORE_URL && (
+          <section className="rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
+            <h2 className="mb-3 text-base font-semibold">
+              Manual install (while the Chrome Web Store review is pending)
+            </h2>
+            <ol className="list-decimal space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+              <li>
+                Click <strong>Download extension (.zip)</strong> above to save{" "}
+                <code>ff-draft-tool-extension.zip</code>.
+              </li>
+              <li>
+                Unzip it somewhere you&apos;ll keep it (right-click the file →{" "}
+                <strong>Extract All</strong> on Windows, or double-click it on
+                Mac) — don&apos;t delete this folder afterward, Chrome loads
+                the extension from it directly.
+              </li>
+              <li>
+                Open Chrome and go to{" "}
+                <code className="rounded bg-zinc-100 px-1 py-0.5 dark:bg-zinc-800">
+                  chrome://extensions
+                </code>
+                .
+              </li>
+              <li>
+                Turn on <strong>Developer mode</strong> — a toggle in the
+                top-right corner of that page.
+              </li>
+              <li>
+                Click <strong>Load unpacked</strong> (top-left) and select the
+                unzipped <code>extension</code> folder — the one that directly
+                contains a file named <code>manifest.json</code>.
+              </li>
+              <li>
+                The FF Draft Tool icon should now appear in your browser
+                toolbar. That&apos;s it — installed.
+              </li>
+            </ol>
+          </section>
+        )}
 
         <section className="rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
           <h2 className="mb-3 text-base font-semibold">How to use it</h2>
