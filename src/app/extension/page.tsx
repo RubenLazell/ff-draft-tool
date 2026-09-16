@@ -129,10 +129,11 @@ export default function ExtensionPage() {
             </li>
             <li>
               Drag the panel by its header to move it, resize it from the
-              bottom-right corner, or click × to hide it (bring it back from
-              the extension&apos;s popup with &ldquo;Show panel on this
-              page&rdquo;). If it ever ends up somewhere awkward, the popup
-              also has a &ldquo;Reset panel position&rdquo; button.
+              bottom-right corner, or click × to hide it — it stays hidden
+              on every ESPN/Sleeper tab until you bring it back from the
+              extension&apos;s popup with &ldquo;Show panel&rdquo;. If it
+              ever ends up somewhere awkward, the popup also has a
+              &ldquo;Reset panel position&rdquo; button.
             </li>
           </ol>
         </section>

@@ -107,6 +107,14 @@
       panel.addEventListener("click", handlePanelClick);
       panel.addEventListener("pointerdown", handlePanelPointerDown);
       initPanelBox(panel);
+      // Hidden (× button) is a deliberate "stay out of my way" choice, so
+      // it persists across refreshes and new tabs the same way position
+      // does — restored here, same async-after-append pattern as
+      // initPanelBox (a brief flash before hiding is an accepted tradeoff,
+      // same as position ever so briefly settling in).
+      chrome.storage.local.get("panelHidden", ({ panelHidden }) => {
+        if (panelHidden) panel.style.display = "none";
+      });
     }
     return panel;
   }
@@ -232,11 +240,11 @@
 
   function handlePanelClick(e) {
     if (e.target.closest(".fftool-hide-toggle")) {
-      // Just a CSS toggle, not a state variable — future renderPanel()
-      // calls only replace innerHTML, which leaves style.display alone,
-      // so this stays hidden across draft-pick updates until explicitly
-      // shown again from the popup.
+      // Persisted (not just a live style toggle) — stays hidden across
+      // draft-pick updates, page refreshes, and new tabs until explicitly
+      // shown again from the popup's "Show panel on this page".
       ensurePanel().style.display = "none";
+      chrome.storage.local.set({ panelHidden: true });
       return;
     }
     if (e.target.closest(".fftool-collapse-toggle")) {
@@ -366,6 +374,7 @@
     if (message?.type === "SHOW_PANEL") {
       const panel = document.getElementById(PANEL_ID);
       if (panel) panel.style.display = "";
+      chrome.storage.local.set({ panelHidden: false });
     }
     if (message?.type === "RESET_PANEL_POSITION") {
       // Dragging is intentionally unrestricted (see initPanelBox), which
@@ -374,6 +383,7 @@
       // it snaps back to content.css's default position/size immediately,
       // without needing a page reload.
       chrome.storage.local.remove("panelBox");
+      chrome.storage.local.set({ panelHidden: false });
       const panel = document.getElementById(PANEL_ID);
       if (panel) {
         for (const prop of ["left", "top", "right", "bottom", "width", "height"]) {
