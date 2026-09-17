@@ -14,11 +14,23 @@ const OVERLAY_MS = 1300;
 
 const VIEW_W = 600;
 const VIEW_H = 240;
-const PAD_X = 16;
-const PAD_TOP = 24;
-const PAD_BOTTOM = 28;
+const PAD_LEFT = 34;
+const PAD_RIGHT = 14;
+const PAD_TOP = 20;
+const PAD_BOTTOM = 34;
+
+// A matchup week spans Thursday through Monday — the real gaps between
+// games (hours, sometimes days) would otherwise swallow almost all the
+// chart's width, squeezing each actual game's action into a sliver. Any
+// gap between consecutive snapshots beyond this cap only "counts" as this
+// many ms of chart space (with a dashed marker + timestamp drawn at the
+// cut, same idea as a stock chart skipping over a weekend) — real
+// within-game gaps (normally ~30s, this app's poll interval) are always
+// far under the cap and render at their true relative spacing.
+const GAP_CAP_MS = 10 * 60_000;
 
 type ChartEvent = { side: "mine" | "theirs"; playerId: string; fullName: string; delta: number; fraction: number };
+type GapMarker = { position: number; label: string };
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -28,24 +40,49 @@ function headshotUrl(playerId: string) {
   return `https://sleepercdn.com/content/nfl/players/${playerId}.jpg`;
 }
 
-// Value + marker position interpolated at a given 0..1 progress along the
-// snapshot timeline — shared by the score readout and the moving dot.
-function interpolateAt(snapshots: MatchupSnapshot[], times: number[], progress: number, key: "myTotal" | "opponentTotal") {
-  const xMin = times[0];
-  const xMax = times[times.length - 1];
-  const targetT = lerp(xMin, xMax, progress);
+function formatTick(ms: number) {
+  return new Date(ms).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
+
+// Compressed x-domain: each snapshot's "chart position" is the sum of the
+// (capped) gaps before it, rather than its raw timestamp — see GAP_CAP_MS.
+function buildPositions(times: number[]): number[] {
+  const positions = [0];
+  for (let i = 1; i < times.length; i++) {
+    positions.push(positions[i - 1] + Math.min(times[i] - times[i - 1], GAP_CAP_MS));
+  }
+  return positions;
+}
+
+function buildGapMarkers(times: number[], positions: number[]): GapMarker[] {
+  const markers: GapMarker[] = [];
+  for (let i = 1; i < times.length; i++) {
+    if (times[i] - times[i - 1] > GAP_CAP_MS) {
+      markers.push({ position: positions[i], label: formatTick(times[i]) });
+    }
+  }
+  return markers;
+}
+
+// Value interpolated at a given 0..1 progress along the compressed
+// timeline (xs) — shared by the score readout, the moving dot, and
+// big-play overlay positioning.
+function interpolateAt(snapshots: MatchupSnapshot[], xs: number[], progress: number, key: "myTotal" | "opponentTotal") {
+  const xMin = xs[0];
+  const xMax = xs[xs.length - 1];
+  const targetX = lerp(xMin, xMax, progress);
   let i = 0;
-  while (i < times.length - 1 && times[i + 1] < targetT) i++;
+  while (i < xs.length - 1 && xs[i + 1] < targetX) i++;
   const a = snapshots[i];
   const b = snapshots[Math.min(i + 1, snapshots.length - 1)];
-  const span = times[Math.min(i + 1, times.length - 1)] - times[i];
-  const localT = span > 0 ? (targetT - times[i]) / span : 0;
+  const span = xs[Math.min(i + 1, xs.length - 1)] - xs[i];
+  const localT = span > 0 ? (targetX - xs[i]) / span : 0;
   return lerp(a[key], b[key], Math.max(0, Math.min(1, localT)));
 }
 
-function buildEvents(snapshots: MatchupSnapshot[], times: number[]): ChartEvent[] {
-  const xMin = times[0];
-  const xMax = times[times.length - 1];
+function buildEvents(snapshots: MatchupSnapshot[], xs: number[]): ChartEvent[] {
+  const xMin = xs[0];
+  const xMax = xs[xs.length - 1];
   const span = xMax - xMin || 1;
   const events: ChartEvent[] = [];
 
@@ -61,7 +98,7 @@ function buildEvents(snapshots: MatchupSnapshot[], times: number[]): ChartEvent[
             playerId: player.playerId,
             fullName: player.fullName,
             delta,
-            fraction: (times[i] - xMin) / span,
+            fraction: (xs[i] - xMin) / span,
           });
         }
       }
@@ -111,9 +148,11 @@ export function ScoreGraph({
   }, [leagueRowId, week]);
 
   const times = useMemo(() => (snapshots ?? []).map((s) => new Date(s.capturedAt).getTime()), [snapshots]);
+  const positions = useMemo(() => buildPositions(times), [times]);
+  const gapMarkers = useMemo(() => buildGapMarkers(times, positions), [times, positions]);
   const events = useMemo(
-    () => (snapshots && snapshots.length >= 2 ? buildEvents(snapshots, times) : []),
-    [snapshots, times]
+    () => (snapshots && snapshots.length >= 2 ? buildEvents(snapshots, positions) : []),
+    [snapshots, positions]
   );
 
   useEffect(() => {
@@ -167,11 +206,11 @@ export function ScoreGraph({
     return max * 1.15;
   }, [snapshots]);
 
-  function scaleX(t: number) {
-    const xMin = times[0];
-    const xMax = times[times.length - 1];
+  function scaleX(x: number) {
+    const xMin = positions[0];
+    const xMax = positions[positions.length - 1];
     const span = xMax - xMin || 1;
-    return PAD_X + ((t - xMin) / span) * (VIEW_W - PAD_X * 2);
+    return PAD_LEFT + ((x - xMin) / span) * (VIEW_W - PAD_LEFT - PAD_RIGHT);
   }
   function scaleY(v: number) {
     return VIEW_H - PAD_BOTTOM - (v / yMax) * (VIEW_H - PAD_TOP - PAD_BOTTOM);
@@ -179,8 +218,12 @@ export function ScoreGraph({
 
   function pathFor(key: "myTotal" | "opponentTotal") {
     if (!snapshots) return "";
-    return snapshots.map((s, i) => `${i === 0 ? "M" : "L"} ${scaleX(times[i]).toFixed(1)} ${scaleY(s[key]).toFixed(1)}`).join(" ");
+    return snapshots
+      .map((s, i) => `${i === 0 ? "M" : "L"} ${scaleX(positions[i]).toFixed(1)} ${scaleY(s[key]).toFixed(1)}`)
+      .join(" ");
   }
+
+  const yTicks = [0, yMax / 2, yMax];
 
   const myPathRef = useRef<SVGPathElement | null>(null);
   const oppPathRef = useRef<SVGPathElement | null>(null);
@@ -194,8 +237,9 @@ export function ScoreGraph({
     });
   }, [hasEnoughData, snapshots]);
 
-  const myNow = hasEnoughData ? interpolateAt(snapshots!, times, progress, "myTotal") : 0;
-  const oppNow = hasEnoughData ? interpolateAt(snapshots!, times, progress, "opponentTotal") : 0;
+  const myNow = hasEnoughData ? interpolateAt(snapshots!, positions, progress, "myTotal") : 0;
+  const oppNow = hasEnoughData ? interpolateAt(snapshots!, positions, progress, "opponentTotal") : 0;
+  const playheadX = hasEnoughData ? scaleX(lerp(positions[0], positions[positions.length - 1], progress)) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" onClick={onClose}>
@@ -244,9 +288,73 @@ export function ScoreGraph({
 
             <div className="relative">
               <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full" role="img" aria-label="Score over time">
+                {/* y-axis gridlines + point labels */}
+                {yTicks.map((v) => (
+                  <g key={v}>
+                    <line
+                      x1={PAD_LEFT}
+                      x2={VIEW_W - PAD_RIGHT}
+                      y1={scaleY(v)}
+                      y2={scaleY(v)}
+                      className="stroke-black/[.06] dark:stroke-white/[.1]"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={PAD_LEFT - 6}
+                      y={scaleY(v)}
+                      textAnchor="end"
+                      dominantBaseline="middle"
+                      className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
+                    >
+                      {v.toFixed(0)}
+                    </text>
+                  </g>
+                ))}
+
+                {/* gap markers — a real-time skip (different day/slate), see GAP_CAP_MS */}
+                {gapMarkers.map((m, i) => (
+                  <g key={i}>
+                    <line
+                      x1={scaleX(m.position)}
+                      x2={scaleX(m.position)}
+                      y1={PAD_TOP}
+                      y2={VIEW_H - PAD_BOTTOM}
+                      className="stroke-black/[.15] dark:stroke-white/[.2]"
+                      strokeWidth={1}
+                      strokeDasharray="3 3"
+                    />
+                    <text
+                      x={scaleX(m.position)}
+                      y={VIEW_H - PAD_BOTTOM + 12}
+                      textAnchor="middle"
+                      className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
+                    >
+                      {m.label}
+                    </text>
+                  </g>
+                ))}
+
+                {/* start/end time labels */}
+                <text
+                  x={scaleX(positions[0])}
+                  y={VIEW_H - PAD_BOTTOM + 12}
+                  textAnchor="start"
+                  className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
+                >
+                  {formatTick(times[0])}
+                </text>
+                <text
+                  x={scaleX(positions[positions.length - 1])}
+                  y={VIEW_H - PAD_BOTTOM + 12}
+                  textAnchor="end"
+                  className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
+                >
+                  {formatTick(times[times.length - 1])}
+                </text>
+
                 <line
-                  x1={PAD_X}
-                  x2={VIEW_W - PAD_X}
+                  x1={PAD_LEFT}
+                  x2={VIEW_W - PAD_RIGHT}
                   y1={VIEW_H - PAD_BOTTOM}
                   y2={VIEW_H - PAD_BOTTOM}
                   className="stroke-black/[.08] dark:stroke-white/[.145]"
@@ -274,28 +382,18 @@ export function ScoreGraph({
                   strokeDasharray={pathLengths.theirs || undefined}
                   strokeDashoffset={pathLengths.theirs ? pathLengths.theirs * (1 - progress) : undefined}
                 />
-                <circle
-                  cx={scaleX(lerp(times[0], times[times.length - 1], progress))}
-                  cy={scaleY(myNow)}
-                  r={4}
-                  fill="#10b981"
-                />
-                <circle
-                  cx={scaleX(lerp(times[0], times[times.length - 1], progress))}
-                  cy={scaleY(oppNow)}
-                  r={4}
-                  fill="#71717a"
-                />
+                <circle cx={playheadX} cy={scaleY(myNow)} r={4} fill="#10b981" />
+                <circle cx={playheadX} cy={scaleY(oppNow)} r={4} fill="#71717a" />
               </svg>
 
               {visibleEvents.map((ev) => {
                 const evValue = interpolateAt(
                   snapshots!,
-                  times,
+                  positions,
                   ev.fraction,
                   ev.side === "mine" ? "myTotal" : "opponentTotal"
                 );
-                const evX = scaleX(lerp(times[0], times[times.length - 1], ev.fraction));
+                const evX = scaleX(lerp(positions[0], positions[positions.length - 1], ev.fraction));
                 const evY = scaleY(evValue);
                 return (
                 <div
