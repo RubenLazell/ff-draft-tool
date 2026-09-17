@@ -24,3 +24,31 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Score graph "big play" callout — scale/fade pop used when a scoring
+   player's headshot appears during chart playback. */
+@keyframes big-play-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(6px);
+  }
+  15% {
+    opacity: 1;
+    transform: scale(1.08) translateY(0);
+  }
+  25% {
+    transform: scale(1) translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+}
+
+.animate-big-play-pop {
+  animation: big-play-pop 1.2s ease-out forwards;
+}

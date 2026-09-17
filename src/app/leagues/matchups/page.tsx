@@ -125,6 +125,42 @@ export default async function MatchupsPage() {
     return { ...card, live };
   });
 
+  // Score-graph history: one row per league per refresh, once any starter
+  // has actually kicked off (skips pointless 0-0 rows pre-game). Reuses
+  // the `live` data already computed above — no extra fetching. Never
+  // allowed to break the page; the graph is a nice-to-have on top of the
+  // live-scoring cards, not core functionality.
+  await Promise.all(
+    cardsWithLive.map(async (card) => {
+      if (!card.live) return;
+      const anyStarted =
+        card.live.mine.starters.some((s) => s.hasStarted) || card.live.theirs.starters.some((s) => s.hasStarted);
+      if (!anyStarted) return;
+      try {
+        await supabase.from("matchup_score_snapshots").insert({
+          user_league_id: card.leagueRowId,
+          week,
+          my_total: card.live.mine.currentTotal,
+          opponent_total: card.live.theirs.currentTotal,
+          my_players: card.live.mine.starters.map((s) => ({
+            playerId: s.playerId,
+            fullName: s.fullName,
+            position: s.position,
+            points: s.points,
+          })),
+          opponent_players: card.live.theirs.starters.map((s) => ({
+            playerId: s.playerId,
+            fullName: s.fullName,
+            position: s.position,
+            points: s.points,
+          })),
+        });
+      } catch {
+        // Best-effort — a missed snapshot just means a slightly sparser graph.
+      }
+    })
+  );
+
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
       <div className="mx-auto w-full max-w-3xl">

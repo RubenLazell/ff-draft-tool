@@ -1,6 +1,8 @@
+import { useState } from "react";
 import type { MatchupResult } from "@/lib/leagueImport";
 import type { LiveMatchup, LivePlayerLine, LiveTeamScore } from "@/lib/liveScoring";
 import { POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
+import { ScoreGraph } from "./ScoreGraph";
 
 function positionColor(position: string) {
   return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
@@ -53,14 +55,18 @@ function RosterList({ team }: { team: LiveTeamScore }) {
 }
 
 export function MatchupCard({
+  leagueRowId,
   leagueName,
   result,
   live,
 }: {
+  leagueRowId: string;
   leagueName: string;
   result: MatchupResult;
   live: LiveMatchup | null;
 }) {
+  const [showGraph, setShowGraph] = useState(false);
+
   if (result.error !== null) {
     return (
       <div className="rounded-lg border border-black/[.08] bg-white p-4 dark:border-white/[.145] dark:bg-zinc-950">
@@ -119,11 +125,21 @@ export function MatchupCard({
         {bothFinal ? "Final" : `Projected final: ${mine.projectedTotal.toFixed(1)} – ${theirs.projectedTotal.toFixed(1)}`}
       </p>
       {!bothFinal && (
-        <p className="mb-4 text-center text-sm font-medium text-black dark:text-zinc-50">
+        <p className="mb-2 text-center text-sm font-medium text-black dark:text-zinc-50">
           {winPct >= 50 ? `You: ${winPct}% to win` : `Opponent: ${100 - winPct}% to win`}
         </p>
       )}
-      {bothFinal && <div className="mb-4" />}
+      {bothFinal && <div className="mb-2" />}
+
+      <div className="mb-4 flex justify-center">
+        <button
+          type="button"
+          onClick={() => setShowGraph(true)}
+          className="rounded-full border border-black/[.08] px-3 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-400 dark:hover:bg-white/[.06]"
+        >
+          📈 See graph
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <RosterList team={mine} />
@@ -134,6 +150,16 @@ export function MatchupCard({
         Points and win % come from Sleeper&apos;s live stats and projections — generic PPR/Standard scoring for
         ESPN leagues, not your league&apos;s exact rules.
       </p>
+
+      {showGraph && (
+        <ScoreGraph
+          leagueRowId={leagueRowId}
+          week={week}
+          myTeamName={mine.teamName}
+          opponentTeamName={theirs.teamName}
+          onClose={() => setShowGraph(false)}
+        />
+      )}
     </div>
   );
 }

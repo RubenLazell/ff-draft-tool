@@ -251,7 +251,13 @@ export function MatchupsView({
             <p className="text-sm text-zinc-500 dark:text-zinc-400">No leagues selected.</p>
           ) : (
             filteredCards.map((card) => (
-              <MatchupCard key={card.leagueRowId} leagueName={card.leagueName} result={card.result} live={card.live} />
+              <MatchupCard
+                key={card.leagueRowId}
+                leagueRowId={card.leagueRowId}
+                leagueName={card.leagueName}
+                result={card.result}
+                live={card.live}
+              />
             ))
           )}
         </div>
