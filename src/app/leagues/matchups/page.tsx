@@ -142,17 +142,20 @@ export default async function MatchupsPage() {
           week,
           my_total: card.live.mine.currentTotal,
           opponent_total: card.live.theirs.currentTotal,
+          my_win_probability: card.live.myWinProbability,
           my_players: card.live.mine.starters.map((s) => ({
             playerId: s.playerId,
             fullName: s.fullName,
             position: s.position,
             points: s.points,
+            raw: s.raw,
           })),
           opponent_players: card.live.theirs.starters.map((s) => ({
             playerId: s.playerId,
             fullName: s.fullName,
             position: s.position,
             points: s.points,
+            raw: s.raw,
           })),
         });
       } catch {

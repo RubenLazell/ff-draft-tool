@@ -26,6 +26,7 @@ export type LivePlayerLine = {
   isFinal: boolean;
   gameDetail: string; // "Final", "Q3 8:41", a kickoff-time string, or "Bye"
   breakdown: string[]; // e.g. ["6 rec", "74 rec yd", "1 TD"] — only once hasStarted
+  raw: Record<string, number>; // same categories as breakdown, unformatted — lets callers (the score graph) diff two points in time to describe what actually changed, not just the point total
 };
 
 export type LiveTeamScore = {
@@ -131,6 +132,7 @@ function buildPlayerLine(
       isFinal: state === "post",
       gameDetail,
       breakdown: hasStarted && statLine ? buildBreakdown(statLine.raw) : [],
+      raw: hasStarted && statLine ? statLine.raw : {},
     },
     mean,
     stdev,
