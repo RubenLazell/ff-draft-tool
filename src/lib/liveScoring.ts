@@ -150,10 +150,13 @@ function buildTeamScore(
   let variance = 0;
   let currentTotal = 0;
 
-  const starters: LivePlayerLine[] = [];
-  const bench: LivePlayerLine[] = [];
-
-  for (const playerId of team.playerIds) {
+  // Iterate starterPlayerIds (not playerIds) for the starters list — it's
+  // already in the league's real roster-slot order (QB, RB, RB, WR, ...),
+  // so both sides of a matchup — sharing the same league, same slot
+  // template — line up row-for-row by slot in the UI. playerIds' order is
+  // arbitrary (whatever the platform's roster endpoint returns), fine for
+  // bench since bench has no slot order to preserve.
+  const starters: LivePlayerLine[] = team.starterPlayerIds.map((playerId) => {
     const { line, mean: playerMean, stdev } = buildPlayerLine(
       playerId,
       format,
@@ -162,19 +165,18 @@ function buildTeamScore(
       projections,
       stats
     );
-    const isStarter = starterSet.has(playerId);
-    if (isStarter) {
-      starters.push(line);
-      mean += playerMean;
-      variance += stdev * stdev;
-      // "Current" is actual points scored only — a not-yet-started player's
-      // row still shows their projection (line.points), but that shouldn't
-      // count toward the live team total until their game actually starts.
-      currentTotal += line.hasStarted ? line.points : 0;
-    } else {
-      bench.push(line);
-    }
-  }
+    mean += playerMean;
+    variance += stdev * stdev;
+    // "Current" is actual points scored only — a not-yet-started player's
+    // row still shows their projection (line.points), but that shouldn't
+    // count toward the live team total until their game actually starts.
+    currentTotal += line.hasStarted ? line.points : 0;
+    return line;
+  });
+
+  const bench: LivePlayerLine[] = team.playerIds
+    .filter((playerId) => !starterSet.has(playerId))
+    .map((playerId) => buildPlayerLine(playerId, format, rankingsById, gamesByTeam, projections, stats).line);
 
   return {
     score: {
