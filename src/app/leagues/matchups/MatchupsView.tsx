@@ -4,8 +4,43 @@ import { useMemo, useState } from "react";
 import type { RankedPlayer } from "@/lib/rankings";
 import type { MatchupResult } from "@/lib/leagueImport";
 import type { GameGroup, GamePlayerEntry } from "@/lib/matchupsByGame";
+import type { NflGame } from "@/lib/nflSchedule";
+import { NFL_TEAMS } from "@/lib/nflTeams";
 import { POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
 import { MatchupCard } from "./MatchupCard";
+
+// Forgiving on purpose — while flipping through RedZone you want to type
+// "sea" or "seahawks" or "seattle" and land on the game instantly,
+// without caring about exact case, punctuation, or which of those forms
+// the schedule data itself uses (it only ever has abbreviations). Splits
+// the query into words and requires each to appear somewhere in a blob of
+// every name/abbreviation for both teams, so word order and extra spacing
+// ("ne sea", "sea ne", "ne  sea") all just work.
+function gameSearchText(game: NflGame): string {
+  const home = NFL_TEAMS[game.homeTeam];
+  const away = NFL_TEAMS[game.awayTeam];
+  return [
+    game.homeTeam,
+    game.awayTeam,
+    game.shortName,
+    home?.city,
+    home?.nickname,
+    home?.fullName,
+    away?.city,
+    away?.nickname,
+    away?.fullName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function matchesGameSearch(game: NflGame, query: string): boolean {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const haystack = gameSearchText(game);
+  return words.every((w) => haystack.includes(w));
+}
 
 function positionColor(position: string) {
   return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
@@ -123,6 +158,7 @@ export function MatchupsView({
   scheduleError: string | null;
 }) {
   const [tab, setTab] = useState<Tab>("league");
+  const [gameSearch, setGameSearch] = useState("");
   const [enabledLeagueIds, setEnabledLeagueIds] = useState<Set<string>>(
     () => new Set(cards.map((c) => c.leagueRowId))
   );
@@ -157,8 +193,8 @@ export function MatchupsView({
         game: group.game,
         entries: group.entries.filter((e) => enabledLeagueIds.has(e.leagueRowId)),
       }))
-      .filter((group) => group.entries.length > 0);
-  }, [gameGroups, enabledLeagueIds]);
+      .filter((group) => group.entries.length > 0 && matchesGameSearch(group.game, gameSearch));
+  }, [gameGroups, enabledLeagueIds, gameSearch]);
 
   // gameGroups (and filteredGameGroups, since filtering preserves order)
   // is already sorted by kickoff time, so consecutive entries sharing a
@@ -223,10 +259,31 @@ export function MatchupsView({
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+          <div className="relative max-w-xs">
+            <input
+              type="text"
+              value={gameSearch}
+              onChange={(e) => setGameSearch(e.target.value)}
+              placeholder="Search a team (e.g. Seahawks, SEA, Seattle)…"
+              className="w-full rounded-full border border-black/[.08] bg-white px-3 py-1.5 pr-8 text-sm text-black outline-none focus:border-black/40 dark:border-white/[.145] dark:bg-zinc-950 dark:text-zinc-50 dark:focus:border-white/40"
+            />
+            {gameSearch && (
+              <button
+                type="button"
+                onClick={() => setGameSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black dark:text-zinc-500 dark:hover:text-zinc-50"
+              >
+                ×
+              </button>
+            )}
+          </div>
           {scheduleError && <p className="text-sm text-red-600 dark:text-red-400">{scheduleError}</p>}
           {slateGroups.length === 0 && !scheduleError && (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              No games with your rostered players found this week.
+              {gameSearch
+                ? "No games match that search."
+                : "No games with your rostered players found this week."}
             </p>
           )}
           {slateGroups.map(({ slate, games }) => (
