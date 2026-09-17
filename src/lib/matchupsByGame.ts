@@ -7,7 +7,7 @@
 // computation — no VORP/replacement-rank math involved.
 
 import { normalizeTeamCode } from "@/lib/normalizeName";
-import type { NflGame } from "@/lib/nflSchedule";
+import { gameByTeam, type NflGame } from "@/lib/nflSchedule";
 import type { PositionRanked } from "@/lib/leagueScoring";
 
 export type RosterPlayerWithSlot = PositionRanked & { isStarter: boolean };
@@ -37,11 +37,7 @@ export function groupPlayersByGame(
   }[],
   schedule: NflGame[]
 ): GameGroup[] {
-  const gameByTeam = new Map<string, NflGame>();
-  for (const game of schedule) {
-    gameByTeam.set(game.homeTeam, game);
-    gameByTeam.set(game.awayTeam, game);
-  }
+  const gamesByTeam = gameByTeam(schedule);
 
   const groups = new Map<string, GameGroup>();
   function addEntry(
@@ -53,7 +49,7 @@ export function groupPlayersByGame(
   ) {
     const team = normalizeTeamCode(player.team);
     if (!team) return; // free agent / no team on record
-    const game = gameByTeam.get(team);
+    const game = gamesByTeam.get(team);
     if (!game) return; // bye week, or a team not found in this week's schedule
 
     let group = groups.get(game.gameId);

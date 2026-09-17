@@ -97,19 +97,95 @@ export type SleeperMatchupEntry = {
   rosterId: number;
   matchupId: number | null;
   playerIds: string[];
+  starterPlayerIds: string[];
 };
 
 // One entry per roster for a given week; two entries sharing the same
 // matchupId are playing each other. `playerIds` is that week's roster
 // snapshot, not necessarily identical to the roster's current state if
-// there's been a waiver move since.
+// there's been a waiver move since. `starterPlayerIds` is Sleeper's real
+// starting lineup for the week (order believed to line up positionally
+// with the league's non-bench roster_positions slots, per Sleeper's
+// documented convention — verify against a live league before trusting
+// the order, not just the membership).
 export async function fetchSleeperMatchups(leagueId: string, week: number): Promise<SleeperMatchupEntry[]> {
   const data = (await sleeperFetch(`/league/${leagueId}/matchups/${week}`)) as
-    | { roster_id: number; matchup_id: number | null; players: string[] | null }[]
+    | { roster_id: number; matchup_id: number | null; players: string[] | null; starters: string[] | null }[]
     | null;
   return (data ?? []).map((m) => ({
     rosterId: m.roster_id,
     matchupId: m.matchup_id,
     playerIds: m.players ?? [],
+    // Sleeper pads an empty starting slot with the string "0" rather than
+    // omitting it — strip those, they aren't a real player.
+    starterPlayerIds: (m.starters ?? []).filter((id) => id !== "0"),
   }));
+}
+
+// --- Live scoring: a different host (api.sleeper.app, no /v1 prefix) than
+// every function above, so it gets its own fetch helper, same pattern. ---
+
+async function sleeperStatsFetch(path: string): Promise<unknown> {
+  const res = await fetch(`https://api.sleeper.app${path}`, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Sleeper stats API ${path} failed: ${res.status}`);
+  return res.json();
+}
+
+export type SleeperPlayerLine = {
+  pts: { std: number; ppr: number; halfPpr: number };
+  raw: Record<string, number>;
+};
+
+// Raw stat categories kept for the live "where the points came from"
+// breakdown — everything else in Sleeper's per-player stat blob is
+// discarded (advanced/snap-count/IDP fields this app has no use for).
+const BREAKDOWN_STAT_KEYS = [
+  "pass_yd",
+  "pass_td",
+  "pass_int",
+  "rush_yd",
+  "rush_td",
+  "rec",
+  "rec_yd",
+  "rec_td",
+  "fum_lost",
+] as const;
+
+function parseSleeperStatLines(data: unknown): Map<string, SleeperPlayerLine> {
+  const entries = (data ?? []) as {
+    player_id: string;
+    stats?: Record<string, number>;
+  }[];
+  const map = new Map<string, SleeperPlayerLine>();
+  for (const entry of entries) {
+    if (!entry.player_id) continue;
+    const stats = entry.stats ?? {};
+    const raw: Record<string, number> = {};
+    for (const key of BREAKDOWN_STAT_KEYS) {
+      if (stats[key]) raw[key] = stats[key];
+    }
+    map.set(entry.player_id, {
+      pts: { std: stats.pts_std ?? 0, ppr: stats.pts_ppr ?? 0, halfPpr: stats.pts_half_ppr ?? 0 },
+      raw,
+    });
+  }
+  return map;
+}
+
+// Pre-game baseline for the week, keyed by player_id (this app's own
+// players.id for every Sleeper-sourced or name-matched ESPN player).
+export async function fetchSleeperProjections(
+  season: string,
+  week: number
+): Promise<Map<string, SleeperPlayerLine>> {
+  const data = await sleeperStatsFetch(`/projections/nfl/${season}/${week}?season_type=regular`);
+  return parseSleeperStatLines(data);
+}
+
+// Actual accrued stats for the week — updates live during games, locks in
+// once final. Same shape as fetchSleeperProjections.
+export async function fetchSleeperWeekStats(season: string, week: number): Promise<Map<string, SleeperPlayerLine>> {
+  const data = await sleeperStatsFetch(`/stats/nfl/${season}/${week}?season_type=regular`);
+  return parseSleeperStatLines(data);
 }

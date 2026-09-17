@@ -6,6 +6,8 @@
 
 import { normalizeTeamCode } from "@/lib/normalizeName";
 
+export type NflGameStatus = { state: "pre" | "in" | "post"; detail: string };
+
 export type NflGame = {
   gameId: string;
   shortName: string; // e.g. "NE @ SEA"
@@ -13,7 +15,20 @@ export type NflGame = {
   homeTeam: string;
   awayTeam: string;
   slate: string; // broadcast slate label, e.g. "Sunday Early"
+  status: NflGameStatus;
 };
+
+// Shared by matchupsByGame.ts (by-game grouping) and liveScoring.ts (live
+// player lookups) — a player's NFL team appears in at most one game per
+// week, so this is a plain lookup, built once per schedule fetch.
+export function gameByTeam(schedule: NflGame[]): Map<string, NflGame> {
+  const map = new Map<string, NflGame>();
+  for (const game of schedule) {
+    map.set(game.homeTeam, game);
+    map.set(game.awayTeam, game);
+  }
+  return map;
+}
 
 // Standard NFL broadcast slates, bucketed by day/time in US Eastern (the
 // conventional NFL broadcast timezone) regardless of the server's own
@@ -55,6 +70,7 @@ export async function fetchNflSchedule(week: number, season: string): Promise<Nf
       shortName: string;
       date: string;
       competitions: { competitors: { homeAway: string; team: { abbreviation: string } }[] }[];
+      status?: { type?: { state?: string; shortDetail?: string } };
     }[];
   };
 
@@ -66,6 +82,7 @@ export async function fetchNflSchedule(week: number, season: string): Promise<Nf
       const homeTeam = normalizeTeamCode(home?.team.abbreviation);
       const awayTeam = normalizeTeamCode(away?.team.abbreviation);
       if (!homeTeam || !awayTeam) return null;
+      const state = event.status?.type?.state;
       return {
         gameId: event.id,
         shortName: event.shortName,
@@ -73,6 +90,10 @@ export async function fetchNflSchedule(week: number, season: string): Promise<Nf
         homeTeam,
         awayTeam,
         slate: getSlate(event.date),
+        status: {
+          state: state === "in" || state === "post" ? state : "pre",
+          detail: event.status?.type?.shortDetail ?? "",
+        },
       };
     })
     .filter((g): g is NflGame => g != null);

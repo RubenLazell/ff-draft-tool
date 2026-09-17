@@ -19,6 +19,13 @@ import { resolveEspnRosters } from "@/lib/espnMatching";
 
 export type ResolvedRosterEntry = { rosterId: number; ownerId: string | null; teamName: string; playerIds: string[] };
 
+// A roster entry that also knows the real (not recomputed-optimal) starting
+// lineup for the week — only fetchCurrentMatchup populates this, since only
+// it has a specific week's matchup data to draw starters from.
+export type MatchupRosterEntry = ResolvedRosterEntry & { starterPlayerIds: string[] };
+
+export type PointsFormat = "PPR" | "HALF_PPR" | "STANDARD";
+
 export type ResolvedLeague = {
   league: { rosterPositions: string[]; totalRosters: number; name: string };
   rosters: ResolvedRosterEntry[];
@@ -94,8 +101,16 @@ export type MatchupResult =
       error: null;
       week: number;
       league: { rosterPositions: string[]; totalRosters: number; name: string };
-      myTeam: ResolvedRosterEntry;
-      opponent: ResolvedRosterEntry | null;
+      myTeam: MatchupRosterEntry;
+      opponent: MatchupRosterEntry | null;
+      // The real per-reception value drives PPR/HALF_PPR/STANDARD for
+      // Sleeper leagues (read straight off the league's own scoring
+      // settings, already fetched). ESPN leagues don't have their scoring
+      // settings parsed anywhere in this app yet — reverse-engineering
+      // ESPN's stat-id scoring map is real work with real risk of being
+      // wrong without live verification, so ESPN leagues default to PPR
+      // as a labeled approximation rather than a silent guess.
+      pointsFormat: PointsFormat;
     };
 
 export async function fetchCurrentMatchup(
@@ -130,20 +145,25 @@ export async function fetchCurrentMatchup(
       return owner?.teamName || owner?.displayName || `Team ${rosterId}`;
     };
 
-    const myTeam: ResolvedRosterEntry = {
+    const myTeam: MatchupRosterEntry = {
       rosterId: myRosterId,
       ownerId: rostersById.get(myRosterId)?.ownerId ?? null,
       teamName: teamNameFor(myRosterId),
       playerIds: mine.playerIds,
+      starterPlayerIds: mine.starterPlayerIds,
     };
-    const opponent: ResolvedRosterEntry | null = opponentEntry
+    const opponent: MatchupRosterEntry | null = opponentEntry
       ? {
           rosterId: opponentEntry.rosterId,
           ownerId: rostersById.get(opponentEntry.rosterId)?.ownerId ?? null,
           teamName: teamNameFor(opponentEntry.rosterId),
           playerIds: opponentEntry.playerIds,
+          starterPlayerIds: opponentEntry.starterPlayerIds,
         }
       : null;
+
+    const rec = sleeperLeague.scoringSettings.rec ?? 0;
+    const pointsFormat: PointsFormat = rec >= 0.99 ? "PPR" : rec >= 0.49 ? "HALF_PPR" : "STANDARD";
 
     return {
       error: null,
@@ -155,6 +175,7 @@ export async function fetchCurrentMatchup(
       },
       myTeam,
       opponent,
+      pointsFormat,
     };
   }
 
@@ -198,5 +219,6 @@ export async function fetchCurrentMatchup(
     },
     myTeam,
     opponent,
+    pointsFormat: "PPR",
   };
 }

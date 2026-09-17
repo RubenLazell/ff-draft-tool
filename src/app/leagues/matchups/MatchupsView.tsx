@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { RankedPlayer } from "@/lib/rankings";
 import type { MatchupResult } from "@/lib/leagueImport";
+import type { LiveMatchup } from "@/lib/liveScoring";
 import type { GameGroup, GamePlayerEntry } from "@/lib/matchupsByGame";
 import type { NflGame } from "@/lib/nflSchedule";
 import { NFL_TEAMS } from "@/lib/nflTeams";
@@ -148,12 +148,10 @@ function GameBody({
 
 export function MatchupsView({
   cards,
-  rankings,
   gameGroups,
   scheduleError,
 }: {
-  cards: { leagueRowId: string; leagueName: string; result: MatchupResult }[];
-  rankings: RankedPlayer[];
+  cards: { leagueRowId: string; leagueName: string; result: MatchupResult; live: LiveMatchup | null }[];
   gameGroups: GameGroup[];
   scheduleError: string | null;
 }) {
@@ -253,7 +251,7 @@ export function MatchupsView({
             <p className="text-sm text-zinc-500 dark:text-zinc-400">No leagues selected.</p>
           ) : (
             filteredCards.map((card) => (
-              <MatchupCard key={card.leagueRowId} leagueName={card.leagueName} result={card.result} rankings={rankings} />
+              <MatchupCard key={card.leagueRowId} leagueName={card.leagueName} result={card.result} live={card.live} />
             ))
           )}
         </div>

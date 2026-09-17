@@ -4,10 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrCreateUserRankings } from "@/lib/rankings";
 import { fetchCurrentMatchup, type MatchupResult, type ResolvedRosterEntry } from "@/lib/leagueImport";
 import { withPositionRanks, resolveRosterPlayers, buildOptimalLineup, type PositionRanked } from "@/lib/leagueScoring";
-import { fetchSleeperCurrentWeek } from "@/lib/sleeper";
-import { fetchNflSchedule } from "@/lib/nflSchedule";
+import { fetchSleeperCurrentWeek, fetchSleeperProjections, fetchSleeperWeekStats, type SleeperPlayerLine } from "@/lib/sleeper";
+import { fetchNflSchedule, type NflGame } from "@/lib/nflSchedule";
 import { groupPlayersByGame, type GameGroup, type RosterPlayerWithSlot } from "@/lib/matchupsByGame";
+import { buildLiveMatchup, type LiveMatchup } from "@/lib/liveScoring";
 import { MatchupsView } from "./MatchupsView";
+import { LiveRefresh } from "./LiveRefresh";
 
 function isSuccess(result: MatchupResult): result is Extract<MatchupResult, { error: null }> {
   return result.error === null;
@@ -28,6 +30,25 @@ export default async function MatchupsPage() {
     .order("created_at", { ascending: false });
 
   const rankings = await getOrCreateUserRankings(supabase, user.id, "PPR");
+
+  // Week/schedule/projections/live-stats are the same for every league this
+  // user has linked — fetched once here rather than per league.
+  const season = String(new Date().getFullYear());
+  let week = 1;
+  let schedule: NflGame[] = [];
+  let projections = new Map<string, SleeperPlayerLine>();
+  let stats = new Map<string, SleeperPlayerLine>();
+  let scheduleError: string | null = null;
+  try {
+    week = await fetchSleeperCurrentWeek();
+    [schedule, projections, stats] = await Promise.all([
+      fetchNflSchedule(week, season),
+      fetchSleeperProjections(season, week),
+      fetchSleeperWeekStats(season, week),
+    ]);
+  } catch {
+    scheduleError = "Couldn't load the NFL schedule right now — try again later.";
+  }
 
   const cards = await Promise.all(
     (leagues ?? []).map(async (league) => {
@@ -79,15 +100,30 @@ export default async function MatchupsPage() {
       };
     });
 
-  let gameGroups: GameGroup[] = [];
-  let scheduleError: string | null = null;
-  try {
-    const week = await fetchSleeperCurrentWeek();
-    const schedule = await fetchNflSchedule(week, String(new Date().getFullYear()));
-    gameGroups = groupPlayersByGame(leagueMatchupsForGrouping, schedule);
-  } catch {
-    scheduleError = "Couldn't load the NFL schedule right now — try again later.";
-  }
+  const gameGroups: GameGroup[] = scheduleError
+    ? []
+    : groupPlayersByGame(leagueMatchupsForGrouping, schedule);
+
+  // Live projections/scoring/win-% per league, By League tab only — real
+  // starters (not the recomputed-optimal lineup used above for By Game),
+  // see liveScoring.ts. Attached directly onto each card (rather than kept
+  // in a separate Map) since Maps shouldn't cross the server->client
+  // component boundary as props.
+  const cardsWithLive = cards.map((card) => {
+    const live: LiveMatchup | null =
+      !scheduleError && isSuccess(card.result) && card.result.opponent
+        ? buildLiveMatchup(
+            card.result.myTeam,
+            card.result.opponent,
+            card.result.pointsFormat,
+            rankingsById,
+            projections,
+            stats,
+            schedule
+          )
+        : null;
+    return { ...card, live };
+  });
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
@@ -98,10 +134,15 @@ export default async function MatchupsPage() {
         >
           ← Back to leagues
         </Link>
-        <h1 className="mb-1 text-xl font-semibold text-black sm:text-2xl dark:text-zinc-50">My Matchups</h1>
-        <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-          This week&apos;s games in every league you&apos;ve set a team for, scored with your own rankings (PPR).
-        </p>
+        <div className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="mb-1 text-xl font-semibold text-black sm:text-2xl dark:text-zinc-50">My Matchups</h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Week {week} — live projections and win % from Sleeper&apos;s stats feed, updating as games play.
+            </p>
+          </div>
+          <LiveRefresh />
+        </div>
 
         {cards.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -112,7 +153,7 @@ export default async function MatchupsPage() {
             and pick your team in each one.
           </p>
         ) : (
-          <MatchupsView cards={cards} rankings={rankings} gameGroups={gameGroups} scheduleError={scheduleError} />
+          <MatchupsView cards={cardsWithLive} gameGroups={gameGroups} scheduleError={scheduleError} />
         )}
       </div>
     </div>
