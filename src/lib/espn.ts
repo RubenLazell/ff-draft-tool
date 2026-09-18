@@ -77,6 +77,15 @@ export type EspnTeam = {
   roster: EspnRosterSlot[];
 };
 
+// One scoring rule as ESPN represents it: `points` is the default rate for
+// this statId, `pointsOverrides` keyed by position id (16 = DEF, same map
+// as ESPN_POSITION_MAP) overrides it for that position specifically — used
+// by D/ST categories (a "sack" statId means nothing for a QB, so ESPN
+// stores the real DEF-applicable rate under pointsOverrides["16"] rather
+// than the base `points`, which is typically 0 for those items). See
+// src/lib/scoringRules.ts for the statId -> category translation.
+export type EspnScoringItem = { statId: number; points: number; pointsOverrides: Record<string, number> };
+
 export type EspnLeague = {
   leagueId: string;
   season: string;
@@ -85,6 +94,7 @@ export type EspnLeague = {
   teams: EspnTeam[];
   currentMatchupPeriodId: number;
   schedule: { matchupPeriodId: number; awayTeamId: number; homeTeamId: number | null }[];
+  scoringItems: EspnScoringItem[]; // the league's real scoring rules, unparsed — see scoringRules.ts
 };
 
 // Canonical display order when flattening lineupSlotCounts (a count map,
@@ -119,7 +129,13 @@ export async function fetchEspnLeague(
   if (!res.headers.get("content-type")?.includes("application/json")) return null;
 
   const data = (await res.json()) as {
-    settings?: { name?: string; rosterSettings?: { lineupSlotCounts?: Record<string, number> } };
+    settings?: {
+      name?: string;
+      rosterSettings?: { lineupSlotCounts?: Record<string, number> };
+      scoringSettings?: {
+        scoringItems?: { statId: number; points?: number; pointsOverrides?: Record<string, number> }[];
+      };
+    };
     status?: { currentMatchupPeriod?: number };
     schedule?: {
       matchupPeriodId: number;
@@ -182,6 +198,12 @@ export async function fetchEspnLeague(
       homeTeamId: m.home?.teamId ?? null,
     }));
 
+  const scoringItems: EspnScoringItem[] = (data.settings?.scoringSettings?.scoringItems ?? []).map((item) => ({
+    statId: item.statId,
+    points: item.points ?? 0,
+    pointsOverrides: item.pointsOverrides ?? {},
+  }));
+
   return {
     leagueId,
     season,
@@ -190,5 +212,6 @@ export async function fetchEspnLeague(
     teams,
     currentMatchupPeriodId: data.status?.currentMatchupPeriod ?? 1,
     schedule,
+    scoringItems,
   };
 }

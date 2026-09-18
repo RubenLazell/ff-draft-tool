@@ -9,9 +9,10 @@
 // directly against real fetched data (see the verification steps in the
 // plan this was built from).
 
-import type { MatchupRosterEntry, PointsFormat } from "@/lib/leagueImport";
+import type { MatchupRosterEntry } from "@/lib/leagueImport";
 import type { RankedPlayer } from "@/lib/rankings";
-import type { SleeperPlayerLine } from "@/lib/sleeper";
+import type { SleeperStatLine } from "@/lib/sleeper";
+import { scorePlayer, type ScoringRules } from "@/lib/scoringRules";
 import { gameByTeam, type NflGame } from "@/lib/nflSchedule";
 import { normalizeTeamCode } from "@/lib/normalizeName";
 import { ESPN_UNMATCHED_PREFIX } from "@/lib/espnMatching";
@@ -44,12 +45,6 @@ export type LiveMatchup = {
   myWinProbability: number; // 0..1
 };
 
-function pointsForFormat(line: SleeperPlayerLine, format: PointsFormat): number {
-  if (format === "PPR") return line.pts.ppr;
-  if (format === "HALF_PPR") return line.pts.halfPpr;
-  return line.pts.std;
-}
-
 const BREAKDOWN_LABELS: [key: string, label: (n: number) => string][] = [
   ["pass_yd", (n) => `${Math.round(n)} pass yd`],
   ["pass_td", (n) => `${Math.round(n)} pass TD`],
@@ -60,6 +55,14 @@ const BREAKDOWN_LABELS: [key: string, label: (n: number) => string][] = [
   ["rec_yd", (n) => `${Math.round(n)} rec yd`],
   ["rec_td", (n) => `${Math.round(n)} rec TD`],
   ["fum_lost", (n) => `${Math.round(n)} fum lost`],
+  ["sack", (n) => `${Math.round(n)} sack`],
+  ["int", (n) => `${Math.round(n)} INT`],
+  ["fum_rec", (n) => `${Math.round(n)} fum rec`],
+  ["ff", (n) => `${Math.round(n)} forced fum`],
+  ["safe", (n) => `${Math.round(n)} safety`],
+  ["blk_kick", (n) => `${Math.round(n)} blocked kick`],
+  ["pts_allow", (n) => `${Math.round(n)} pts allowed`],
+  ["yds_allow", (n) => `${Math.round(n)} yds allowed`],
 ];
 
 function buildBreakdown(raw: Record<string, number>): string[] {
@@ -112,11 +115,11 @@ function estimate(
 
 function buildPlayerLine(
   playerId: string,
-  format: PointsFormat,
+  scoringRules: ScoringRules,
   rankingsById: ReadonlyMap<string, RankedPlayer>,
   gamesByTeam: Map<string, NflGame>,
-  projections: Map<string, SleeperPlayerLine>,
-  stats: Map<string, SleeperPlayerLine>
+  projections: Map<string, SleeperStatLine>,
+  stats: Map<string, SleeperStatLine>
 ): { line: LivePlayerLine; mean: number; stdev: number } {
   const info = rankingsById.get(playerId);
   // An ESPN player this app couldn't name-match against `players` (see
@@ -129,8 +132,8 @@ function buildPlayerLine(
 
   const projLine = projections.get(playerId);
   const statLine = stats.get(playerId);
-  const projected = projLine ? pointsForFormat(projLine, format) : 0;
-  const actual = statLine ? pointsForFormat(statLine, format) : 0;
+  const projected = projLine ? scorePlayer(projLine, scoringRules) : 0;
+  const actual = statLine ? scorePlayer(statLine, scoringRules) : 0;
 
   const state: "pre" | "in" | "post" | "none" = game ? game.status.state : "none";
   const remainingFraction = state === "in" && game ? remainingGameFraction(game.status.period, game.status.clock) : 1;
@@ -166,8 +169,8 @@ function buildPlayerLine(
       hasStarted,
       isFinal: state === "post",
       gameDetail,
-      breakdown: hasStarted && statLine ? buildBreakdown(statLine.raw) : [],
-      raw: hasStarted && statLine ? statLine.raw : {},
+      breakdown: hasStarted && statLine ? buildBreakdown(statLine) : [],
+      raw: hasStarted && statLine ? statLine : {},
     },
     mean,
     stdev,
@@ -187,11 +190,11 @@ function byPositionOrder(a: LivePlayerLine, b: LivePlayerLine): number {
 
 function buildTeamScore(
   team: MatchupRosterEntry,
-  format: PointsFormat,
+  scoringRules: ScoringRules,
   rankingsById: ReadonlyMap<string, RankedPlayer>,
   gamesByTeam: Map<string, NflGame>,
-  projections: Map<string, SleeperPlayerLine>,
-  stats: Map<string, SleeperPlayerLine>
+  projections: Map<string, SleeperStatLine>,
+  stats: Map<string, SleeperStatLine>
 ): { score: LiveTeamScore; mean: number; variance: number } {
   const starterSet = new Set(team.starterPlayerIds);
   let mean = 0;
@@ -202,7 +205,7 @@ function buildTeamScore(
     .map((playerId) => {
       const { line, mean: playerMean, stdev } = buildPlayerLine(
         playerId,
-        format,
+        scoringRules,
         rankingsById,
         gamesByTeam,
         projections,
@@ -220,7 +223,7 @@ function buildTeamScore(
 
   const bench: LivePlayerLine[] = team.playerIds
     .filter((playerId) => !starterSet.has(playerId))
-    .map((playerId) => buildPlayerLine(playerId, format, rankingsById, gamesByTeam, projections, stats).line)
+    .map((playerId) => buildPlayerLine(playerId, scoringRules, rankingsById, gamesByTeam, projections, stats).line)
     .sort(byPositionOrder);
 
   return {
@@ -248,15 +251,15 @@ function normalCdf(z: number): number {
 export function buildLiveMatchup(
   myTeam: MatchupRosterEntry,
   opponent: MatchupRosterEntry,
-  format: PointsFormat,
+  scoringRules: ScoringRules,
   rankingsById: ReadonlyMap<string, RankedPlayer>,
-  projections: Map<string, SleeperPlayerLine>,
-  stats: Map<string, SleeperPlayerLine>,
+  projections: Map<string, SleeperStatLine>,
+  stats: Map<string, SleeperStatLine>,
   schedule: NflGame[]
 ): LiveMatchup {
   const gamesByTeam = gameByTeam(schedule);
-  const mine = buildTeamScore(myTeam, format, rankingsById, gamesByTeam, projections, stats);
-  const theirs = buildTeamScore(opponent, format, rankingsById, gamesByTeam, projections, stats);
+  const mine = buildTeamScore(myTeam, scoringRules, rankingsById, gamesByTeam, projections, stats);
+  const theirs = buildTeamScore(opponent, scoringRules, rankingsById, gamesByTeam, projections, stats);
 
   const totalVariance = mine.variance + theirs.variance;
   const myWinProbability =

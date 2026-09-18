@@ -151,8 +151,8 @@ export function MatchupCard({
       </div>
 
       <p className="mt-4 text-center text-xs text-zinc-400 dark:text-zinc-600">
-        Points and win % come from Sleeper&apos;s live stats and projections — generic PPR/Standard scoring for
-        ESPN leagues, not your league&apos;s exact rules.
+        Points and win % use your league&apos;s own real scoring rules on either platform. One gap: defensive/special
+        teams touchdowns aren&apos;t scored — Sleeper&apos;s public stats don&apos;t expose a reliable count for them.
       </p>
 
       {showGraph && (

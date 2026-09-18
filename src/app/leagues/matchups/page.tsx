@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrCreateUserRankings } from "@/lib/rankings";
 import { fetchCurrentMatchup, type MatchupResult, type MatchupRosterEntry } from "@/lib/leagueImport";
 import { withPositionRanks, resolveRosterPlayers } from "@/lib/leagueScoring";
-import { fetchSleeperCurrentWeek, fetchSleeperProjections, fetchSleeperWeekStats, type SleeperPlayerLine } from "@/lib/sleeper";
+import { fetchSleeperCurrentWeek, fetchSleeperProjections, fetchSleeperWeekStats, type SleeperStatLine } from "@/lib/sleeper";
 import { fetchNflSchedule, type NflGame } from "@/lib/nflSchedule";
 import { groupPlayersByGame, type GameGroup, type RosterPlayerWithSlot } from "@/lib/matchupsByGame";
 import { buildLiveMatchup, type LiveMatchup } from "@/lib/liveScoring";
@@ -36,8 +36,8 @@ export default async function MatchupsPage() {
   const season = String(new Date().getFullYear());
   let week = 1;
   let schedule: NflGame[] = [];
-  let projections = new Map<string, SleeperPlayerLine>();
-  let stats = new Map<string, SleeperPlayerLine>();
+  let projections = new Map<string, SleeperStatLine>();
+  let stats = new Map<string, SleeperStatLine>();
   let scheduleError: string | null = null;
   try {
     week = await fetchSleeperCurrentWeek();
@@ -113,7 +113,7 @@ export default async function MatchupsPage() {
         ? buildLiveMatchup(
             card.result.myTeam,
             card.result.opponent,
-            card.result.pointsFormat,
+            card.result.scoringRules,
             rankingsById,
             projections,
             stats,

@@ -132,60 +132,41 @@ async function sleeperStatsFetch(path: string): Promise<unknown> {
   return res.json();
 }
 
-export type SleeperPlayerLine = {
-  pts: { std: number; ppr: number; halfPpr: number };
-  raw: Record<string, number>;
-};
+// A player's (or team defense's) full raw stat line for one week, straight
+// from Sleeper — every category Sleeper tracks, unfiltered. This is also
+// the exact key vocabulary Sleeper's own SleeperLeague.scoringSettings
+// uses (rec, rec_yd, rec_td, sack, pts_allow_7_13, ...), which is what
+// lets src/lib/scoringRules.ts score a player generically: sum of
+// raw[category] * league's real rate for that category, for either
+// platform, one formula. This used to be filtered down to a curated
+// display-only subset here — that curation now lives purely in
+// BREAKDOWN_LABELS (liveScoring.ts); the scoring engine needs categories
+// it never covered (2pt conversions, kicker brackets, every D/ST category).
+export type SleeperStatLine = Record<string, number>;
 
-// Raw stat categories kept for the live "where the points came from"
-// breakdown — everything else in Sleeper's per-player stat blob is
-// discarded (advanced/snap-count/IDP fields this app has no use for).
-const BREAKDOWN_STAT_KEYS = [
-  "pass_yd",
-  "pass_td",
-  "pass_int",
-  "rush_yd",
-  "rush_td",
-  "rec",
-  "rec_yd",
-  "rec_td",
-  "fum_lost",
-] as const;
-
-function parseSleeperStatLines(data: unknown): Map<string, SleeperPlayerLine> {
+function parseSleeperStatLines(data: unknown): Map<string, SleeperStatLine> {
   const entries = (data ?? []) as {
     player_id: string;
     stats?: Record<string, number>;
   }[];
-  const map = new Map<string, SleeperPlayerLine>();
+  const map = new Map<string, SleeperStatLine>();
   for (const entry of entries) {
     if (!entry.player_id) continue;
-    const stats = entry.stats ?? {};
-    const raw: Record<string, number> = {};
-    for (const key of BREAKDOWN_STAT_KEYS) {
-      if (stats[key]) raw[key] = stats[key];
-    }
-    map.set(entry.player_id, {
-      pts: { std: stats.pts_std ?? 0, ppr: stats.pts_ppr ?? 0, halfPpr: stats.pts_half_ppr ?? 0 },
-      raw,
-    });
+    map.set(entry.player_id, entry.stats ?? {});
   }
   return map;
 }
 
 // Pre-game baseline for the week, keyed by player_id (this app's own
 // players.id for every Sleeper-sourced or name-matched ESPN player).
-export async function fetchSleeperProjections(
-  season: string,
-  week: number
-): Promise<Map<string, SleeperPlayerLine>> {
+export async function fetchSleeperProjections(season: string, week: number): Promise<Map<string, SleeperStatLine>> {
   const data = await sleeperStatsFetch(`/projections/nfl/${season}/${week}?season_type=regular`);
   return parseSleeperStatLines(data);
 }
 
 // Actual accrued stats for the week — updates live during games, locks in
 // once final. Same shape as fetchSleeperProjections.
-export async function fetchSleeperWeekStats(season: string, week: number): Promise<Map<string, SleeperPlayerLine>> {
+export async function fetchSleeperWeekStats(season: string, week: number): Promise<Map<string, SleeperStatLine>> {
   const data = await sleeperStatsFetch(`/stats/nfl/${season}/${week}?season_type=regular`);
   return parseSleeperStatLines(data);
 }
