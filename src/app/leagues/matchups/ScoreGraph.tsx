@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { getMatchupSnapshots, type MatchupSnapshot } from "./actions";
 
 // A point delta between two consecutive snapshots at/above this is treated
@@ -192,6 +192,10 @@ export function ScoreGraph({
   opponentTeamName: string;
   onClose: () => void;
 }) {
+  // Unique per instance — plain string ids would collide if two of these
+  // ever rendered at once (each <clipPath> needs a distinct id within the
+  // page, not just within its own <svg>).
+  const clipId = useId();
   const [snapshots, setSnapshots] = useState<MatchupSnapshot[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Defaults to fully drawn (latest totals) so opening the graph shows
@@ -337,24 +341,6 @@ export function ScoreGraph({
       .join(" ");
   }
 
-  const myPathRef = useRef<SVGPathElement | null>(null);
-  const oppPathRef = useRef<SVGPathElement | null>(null);
-  const winPathRef = useRef<SVGPathElement | null>(null);
-  const [pathLengths, setPathLengths] = useState<{ mine: number; theirs: number; win: number }>({
-    mine: 0,
-    theirs: 0,
-    win: 0,
-  });
-
-  useEffect(() => {
-    if (!hasEnoughData) return;
-    setPathLengths({
-      mine: myPathRef.current?.getTotalLength() ?? 0,
-      theirs: oppPathRef.current?.getTotalLength() ?? 0,
-      win: winPathRef.current?.getTotalLength() ?? 0,
-    });
-  }, [hasEnoughData, snapshots]);
-
   const myNow = hasEnoughData ? interpolateAt(snapshots!, positions, progress, "myTotal") : 0;
   const oppNow = hasEnoughData ? interpolateAt(snapshots!, positions, progress, "opponentTotal") : 0;
   const winProbNow = hasEnoughData ? interpolateSeries(positions, winProbSeries, progress) : 0.5;
@@ -412,6 +398,17 @@ export function ScoreGraph({
 
             <div className="relative">
               <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="w-full" role="img" aria-label="Score over time">
+                {/* Reveals the line up to the playhead's exact x position —
+                    NOT a stroke-dasharray/dashoffset reveal, which paces
+                    itself by raw path arc length. A steep climb (points
+                    just scored) covers far more arc length than horizontal
+                    distance, so that technique visibly desyncs the line
+                    from the dot right when something exciting happens. A
+                    clip tied directly to playheadX can't drift regardless
+                    of how steep the line is. */}
+                <clipPath id={`scoreGraphClip-${clipId}`}>
+                  <rect x={0} y={0} width={playheadX} height={VIEW_H} />
+                </clipPath>
                 {/* y-axis gridlines + point labels */}
                 {yTicks.map((v) => (
                   <g key={v}>
@@ -485,26 +482,22 @@ export function ScoreGraph({
                   strokeWidth={1}
                 />
                 <path
-                  ref={myPathRef}
                   d={pathFor("myTotal")}
                   fill="none"
                   stroke="#10b981"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeDasharray={pathLengths.mine || undefined}
-                  strokeDashoffset={pathLengths.mine ? pathLengths.mine * (1 - progress) : undefined}
+                  clipPath={`url(#scoreGraphClip-${clipId})`}
                 />
                 <path
-                  ref={oppPathRef}
                   d={pathFor("opponentTotal")}
                   fill="none"
                   stroke="#71717a"
                   strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeDasharray={pathLengths.theirs || undefined}
-                  strokeDashoffset={pathLengths.theirs ? pathLengths.theirs * (1 - progress) : undefined}
+                  clipPath={`url(#scoreGraphClip-${clipId})`}
                 />
                 <circle cx={playheadX} cy={scaleY(myNow)} r={paused ? 5.5 : 4} fill="#10b981" className="transition-[r] duration-300" />
                 <circle cx={playheadX} cy={scaleY(oppNow)} r={paused ? 5.5 : 4} fill="#71717a" className="transition-[r] duration-300" />
@@ -570,6 +563,9 @@ export function ScoreGraph({
                 Win probability
               </p>
               <svg viewBox={`0 0 ${VIEW_W} ${WIN_VIEW_H}`} className="w-full" role="img" aria-label="Win probability over time">
+                <clipPath id={`winProbClip-${clipId}`}>
+                  <rect x={0} y={0} width={playheadX} height={WIN_VIEW_H} />
+                </clipPath>
                 <line
                   x1={PAD_LEFT}
                   x2={VIEW_W - PAD_RIGHT}
@@ -592,15 +588,13 @@ export function ScoreGraph({
                   </text>
                 ))}
                 <path
-                  ref={winPathRef}
                   d={winPathFor()}
                   fill="none"
                   stroke="#6366f1"
                   strokeWidth={2}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeDasharray={pathLengths.win || undefined}
-                  strokeDashoffset={pathLengths.win ? pathLengths.win * (1 - progress) : undefined}
+                  clipPath={`url(#winProbClip-${clipId})`}
                 />
                 <circle cx={playheadX} cy={winScaleY(winProbNow * 100)} r={paused ? 4.5 : 3.5} fill="#6366f1" className="transition-[r] duration-300" />
               </svg>
