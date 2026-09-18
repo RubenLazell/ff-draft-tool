@@ -114,7 +114,7 @@ function buildPlayerLine(
     : state === "post"
       ? "Final"
       : state === "in"
-        ? game.status.detail
+        ? `🔴 ${game.status.period > 4 ? "OT" : `Q${game.status.period}`} ${game.status.clock}`.trim()
         : new Date(game.kickoff).toLocaleString("en-US", {
             weekday: "short",
             hour: "numeric",

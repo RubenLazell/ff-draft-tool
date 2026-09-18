@@ -6,7 +6,12 @@
 
 import { normalizeTeamCode } from "@/lib/normalizeName";
 
-export type NflGameStatus = { state: "pre" | "in" | "post"; detail: string };
+export type NflGameStatus = {
+  state: "pre" | "in" | "post";
+  detail: string;
+  period: number; // quarter (5+ = OT), only meaningful when state is "in"
+  clock: string; // e.g. "7:09", only meaningful when state is "in"
+};
 
 export type NflGame = {
   gameId: string;
@@ -70,7 +75,7 @@ export async function fetchNflSchedule(week: number, season: string): Promise<Nf
       shortName: string;
       date: string;
       competitions: { competitors: { homeAway: string; team: { abbreviation: string } }[] }[];
-      status?: { type?: { state?: string; shortDetail?: string } };
+      status?: { period?: number; displayClock?: string; type?: { state?: string; shortDetail?: string } };
     }[];
   };
 
@@ -93,6 +98,8 @@ export async function fetchNflSchedule(week: number, season: string): Promise<Nf
         status: {
           state: state === "in" || state === "post" ? state : "pre",
           detail: event.status?.type?.shortDetail ?? "",
+          period: event.status?.period ?? 0,
+          clock: event.status?.displayClock ?? "",
         },
       };
     })
