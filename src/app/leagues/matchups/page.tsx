@@ -141,18 +141,22 @@ export default async function MatchupsPage() {
           my_total: card.live.mine.currentTotal,
           opponent_total: card.live.theirs.currentTotal,
           my_win_probability: card.live.myWinProbability,
+          // s.points is the projection before a player's game starts (kept
+          // that way for the live card's own display) — 0 here instead so
+          // the graph's per-player history matches "not played yet" rather
+          // than showing a projection as if it were accrued points.
           my_players: card.live.mine.starters.map((s) => ({
             playerId: s.playerId,
             fullName: s.fullName,
             position: s.position,
-            points: s.points,
+            points: s.hasStarted ? s.points : 0,
             raw: s.raw,
           })),
           opponent_players: card.live.theirs.starters.map((s) => ({
             playerId: s.playerId,
             fullName: s.fullName,
             position: s.position,
-            points: s.points,
+            points: s.hasStarted ? s.points : 0,
             raw: s.raw,
           })),
         });
