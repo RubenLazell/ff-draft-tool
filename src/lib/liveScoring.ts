@@ -67,19 +67,45 @@ function buildBreakdown(raw: Record<string, number>): string[] {
 }
 
 // Point estimate + variance for one player's contribution to a team's
-// final score, used only for the win-probability calc — not shown to the
-// user directly. Deliberately simple: no play-by-play or clock parsing.
+// final score — also what's shown to the user as "proj final" once a
+// player's game is live (see LivePlayerLine.projectedFinal).
 const STDEV_FRACTION_PREGAME = 0.5;
 const STDEV_FRACTION_LIVE = 0.35;
-const REMAINING_FRACTION_LIVE = 0.5; // flat "half the projection left" stand-in while a game is in progress
+
+const QUARTER_SECONDS = 15 * 60;
+const REGULATION_SECONDS = 4 * QUARTER_SECONDS;
+
+function parseClockSeconds(clock: string): number {
+  const [min, sec] = clock.split(":").map(Number);
+  if (Number.isNaN(min) || Number.isNaN(sec)) return 0;
+  return min * 60 + sec;
+}
+
+// Fraction of the game clock still remaining, from the real period/clock
+// ESPN reports — used to scale how much of a live player's pregame
+// projection should still be "left to earn." Early in Q1 this is close
+// to 1 (nearly the full projection still ahead), late in the 4th it's
+// close to 0. Deliberately simple: assumes roughly linear pace across the
+// game (no garbage-time/red-zone modeling), but a real improvement over a
+// flat "half left" guess, which barely moved off the pregame number no
+// matter how early or late the game actually was.
+function remainingGameFraction(period: number, clock: string): number {
+  if (period <= 0) return 1;
+  if (period > 4) return 0; // OT — treat the pregame projection as fully "spent" by end of regulation
+  const elapsedSeconds = (period - 1) * QUARTER_SECONDS + (QUARTER_SECONDS - parseClockSeconds(clock));
+  return Math.max(0, Math.min(1, 1 - elapsedSeconds / REGULATION_SECONDS));
+}
 
 function estimate(
   state: "pre" | "in" | "post" | "none",
   actual: number,
-  projected: number
+  projected: number,
+  remainingFraction: number
 ): { mean: number; stdev: number } {
   if (state === "post") return { mean: actual, stdev: 0 };
-  if (state === "in") return { mean: actual + REMAINING_FRACTION_LIVE * projected, stdev: STDEV_FRACTION_LIVE * projected };
+  if (state === "in") {
+    return { mean: actual + remainingFraction * projected, stdev: STDEV_FRACTION_LIVE * projected * remainingFraction };
+  }
   if (state === "pre") return { mean: projected, stdev: STDEV_FRACTION_PREGAME * projected };
   return { mean: 0, stdev: 0 }; // bye / no game found this week
 }
@@ -107,7 +133,8 @@ function buildPlayerLine(
   const actual = statLine ? pointsForFormat(statLine, format) : 0;
 
   const state: "pre" | "in" | "post" | "none" = game ? game.status.state : "none";
-  const { mean, stdev } = estimate(state, actual, projected);
+  const remainingFraction = state === "in" && game ? remainingGameFraction(game.status.period, game.status.clock) : 1;
+  const { mean, stdev } = estimate(state, actual, projected, remainingFraction);
 
   const hasStarted = state === "in" || state === "post";
   const gameDetail = !game
