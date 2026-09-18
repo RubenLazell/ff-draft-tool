@@ -108,28 +108,30 @@ export function MatchupCard({
         <span className="font-medium text-black dark:text-zinc-50">{mine.teamName}</span>
         <span className="font-medium text-black dark:text-zinc-50">{theirs.teamName}</span>
       </div>
+      <p className="text-center text-[10px] font-semibold tracking-wide text-zinc-400 uppercase dark:text-zinc-600">
+        {bothFinal ? "Final" : "Live"}
+      </p>
       <div className="mb-1 flex items-center justify-center gap-3">
         <span
-          className={`text-2xl font-semibold tabular-nums ${mine.currentTotal >= theirs.currentTotal ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
+          className={`text-4xl font-bold tabular-nums ${mine.currentTotal >= theirs.currentTotal ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
         >
           {mine.currentTotal.toFixed(1)}
         </span>
         <span className="text-xs text-zinc-400 dark:text-zinc-600">vs</span>
         <span
-          className={`text-2xl font-semibold tabular-nums ${theirs.currentTotal >= mine.currentTotal ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
+          className={`text-4xl font-bold tabular-nums ${theirs.currentTotal >= mine.currentTotal ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 dark:text-zinc-400"}`}
         >
           {theirs.currentTotal.toFixed(1)}
         </span>
       </div>
-      <p className="mb-1 text-center text-xs text-zinc-500 dark:text-zinc-400">
-        {bothFinal ? "Final" : `Projected final: ${mine.projectedTotal.toFixed(1)} – ${theirs.projectedTotal.toFixed(1)}`}
-      </p>
       {!bothFinal && (
-        <p className="mb-2 text-center text-sm font-medium text-black dark:text-zinc-50">
+        <p className="mb-1 text-center text-sm font-medium text-black dark:text-zinc-50">
           {winPct >= 50 ? `You: ${winPct}% to win` : `Opponent: ${100 - winPct}% to win`}
         </p>
       )}
-      {bothFinal && <div className="mb-2" />}
+      <p className="mb-2 text-center text-[10px] text-zinc-400 dark:text-zinc-600">
+        {bothFinal ? "" : `proj. final ${mine.projectedTotal.toFixed(1)} – ${theirs.projectedTotal.toFixed(1)}`}
+      </p>
 
       <div className="mb-4 flex justify-center">
         <button
