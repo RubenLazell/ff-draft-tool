@@ -22,6 +22,7 @@ export type LivePlayerLine = {
   position: string;
   team: string | null;
   points: number;
+  projectedFinal: number; // the model's current best guess at this player's END-of-game total — the pregame projection before kickoff, actual+estimated-remaining mid-game, or just the final once it's over
   hasStarted: boolean;
   isFinal: boolean;
   gameDetail: string; // "Final", "Q3 8:41", a kickoff-time string, or "Bye"
@@ -134,6 +135,7 @@ function buildPlayerLine(
       position,
       team,
       points: hasStarted ? actual : projected,
+      projectedFinal: mean,
       hasStarted,
       isFinal: state === "post",
       gameDetail,

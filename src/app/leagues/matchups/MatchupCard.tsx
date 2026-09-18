@@ -22,6 +22,7 @@ function PlayerRow({ line }: { line: LivePlayerLine }) {
           <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
             {line.gameDetail}
             {!line.hasStarted && ` · proj ${line.points.toFixed(1)}`}
+            {line.hasStarted && !line.isFinal && ` · proj final ${line.projectedFinal.toFixed(1)}`}
             {line.breakdown.length > 0 && ` · ${line.breakdown.join(", ")}`}
           </p>
         </div>
