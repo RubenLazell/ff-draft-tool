@@ -304,7 +304,13 @@ export function MatchupsView({
                       <div className="mb-3 flex items-center justify-between gap-2">
                         <p className="font-medium text-black dark:text-zinc-50">{group.game.shortName}</p>
                         <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {kickoff.toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" })}
+                          {kickoff.toLocaleString("en-US", {
+                            timeZone: "America/New_York",
+                            weekday: "short",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}{" "}
+                          ET
                         </span>
                       </div>
                       <GameBody entries={group.entries} leagueOrder={leagueOrder} />

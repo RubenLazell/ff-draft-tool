@@ -94,8 +94,16 @@ function headshotUrl(playerId: string) {
   return `https://sleepercdn.com/content/nfl/players/${playerId}.jpg`;
 }
 
+// Always Eastern (the conventional NFL broadcast timezone), regardless of
+// the viewer's own — same convention as every other kickoff-time display
+// in this app (see getSlate in nflSchedule.ts).
 function formatTick(ms: number) {
-  return new Date(ms).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" });
+  return new Date(ms).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 // Compressed x-domain: each snapshot's "chart position" is the sum of the

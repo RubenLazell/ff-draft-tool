@@ -115,7 +115,13 @@ function buildPlayerLine(
       ? "Final"
       : state === "in"
         ? `🔴 ${game.status.period > 4 ? "OT" : `Q${game.status.period}`} ${game.status.clock}`.trim()
-        : new Date(game.kickoff).toLocaleString("en-US", {
+        : // Runs server-side, where the runtime's local timezone can't be
+          // assumed to be Eastern (e.g. UTC on Vercel) — explicit here,
+          // same convention as every other kickoff-time display in this
+          // app (see getSlate in nflSchedule.ts). Missing this is what
+          // made 1pm ET games show up as "5pm".
+          new Date(game.kickoff).toLocaleString("en-US", {
+            timeZone: "America/New_York",
             weekday: "short",
             hour: "numeric",
             minute: "2-digit",
