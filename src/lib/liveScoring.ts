@@ -63,6 +63,7 @@ const BREAKDOWN_LABELS: [key: string, label: (n: number) => string][] = [
   ["blk_kick", (n) => `${Math.round(n)} blocked kick`],
   ["pts_allow", (n) => `${Math.round(n)} pts allowed`],
   ["yds_allow", (n) => `${Math.round(n)} yds allowed`],
+  ["def_td", (n) => `${Math.round(n)} def/ST TD`],
 ];
 
 function buildBreakdown(raw: Record<string, number>): string[] {

@@ -176,6 +176,12 @@ const ESPN_YARDS_ALLOWED_STAT_IDS: [statId: number, min: number, max: number][] 
   [136, 550, Infinity],
 ];
 
+// The 5 distinct defensive/special-teams touchdown types ESPN lets a
+// league score separately (blocked-kick return, kickoff return, punt
+// return, interception return, fumble return) — see the comment where
+// this is used, below, for why they collapse into one rate.
+const ESPN_DEF_TD_STAT_IDS = [93, 101, 102, 103, 104];
+
 export function rulesFromEspn(scoringItems: EspnScoringItem[]): ScoringRules {
   const byId = new Map(scoringItems.map((item) => [item.statId, item]));
   const rates: Record<string, number> = {};
@@ -205,6 +211,19 @@ export function rulesFromEspn(scoringItems: EspnScoringItem[]): ScoringRules {
     }
     return brackets;
   }
+
+  // Sleeper's raw per-player stats track a defense/special-teams touchdown
+  // as one undifferentiated def_td count (verified directly against real
+  // games this season — a real interception return and a real fumble
+  // return both showed up as def_td: 1) — it can't say which of ESPN's 5
+  // separately-configurable TD types occurred, so this averages whichever
+  // of them the league has set into one representative rate against that
+  // same def_td key. Exact when a league scores all 5 the same (every real
+  // league seen this session does); an approximation only if one doesn't.
+  const defTdRates = ESPN_DEF_TD_STAT_IDS.map((statId) => byId.get(statId))
+    .filter((item): item is EspnScoringItem => !!item)
+    .map((item) => item.pointsOverrides["16"] ?? item.points);
+  if (defTdRates.length > 0) rates.def_td = defTdRates.reduce((a, b) => a + b, 0) / defTdRates.length;
 
   return {
     rates,
