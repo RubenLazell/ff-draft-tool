@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MatchupResult } from "@/lib/leagueImport";
 import type { LiveMatchup } from "@/lib/liveScoring";
 import type { GameGroup, GamePlayerEntry } from "@/lib/matchupsByGame";
@@ -48,6 +48,13 @@ function positionColor(position: string) {
 
 const TABS = ["league", "game"] as const;
 type Tab = (typeof TABS)[number];
+
+// A viewer's own convenience, not shared/critical data — localStorage is
+// the right call, per-browser, survives a real page reload (the in-app
+// 30s poll/manual refresh already preserves this for free since it just
+// re-renders this same mounted component, no persistence needed for that
+// case).
+const LEAGUE_FILTER_STORAGE_KEY = "ff-draft-tool:matchups:enabledLeagueIds";
 
 function EntryRow({ entry, showLeague }: { entry: GamePlayerEntry; showLeague: boolean }) {
   return (
@@ -160,6 +167,36 @@ export function MatchupsView({
   const [enabledLeagueIds, setEnabledLeagueIds] = useState<Set<string>>(
     () => new Set(cards.map((c) => c.leagueRowId))
   );
+  // Guards the one-time restore below so it fires exactly once, right
+  // after hydration — "adjusting state during render" rather than in an
+  // effect (React's own recommended pattern for this: see "You Might Not
+  // Need An Effect"). SSR and the first client render both have to default
+  // to "all leagues" (no synchronous localStorage access during render, or
+  // server/client HTML would mismatch); this corrects it on the very next
+  // render once we're definitely client-side.
+  const [restoredFilter, setRestoredFilter] = useState(false);
+  if (!restoredFilter && typeof window !== "undefined") {
+    setRestoredFilter(true);
+    try {
+      const stored = localStorage.getItem(LEAGUE_FILTER_STORAGE_KEY);
+      if (stored) {
+        const savedIds: string[] = JSON.parse(stored);
+        const validIds = savedIds.filter((id) => cards.some((c) => c.leagueRowId === id));
+        if (validIds.length > 0) setEnabledLeagueIds(new Set(validIds));
+      }
+    } catch {
+      // localStorage can throw (private browsing, blocked storage) — fine,
+      // just keep the "all leagues enabled" default.
+    }
+  }
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LEAGUE_FILTER_STORAGE_KEY, JSON.stringify([...enabledLeagueIds]));
+    } catch {
+      // ignore — same as above
+    }
+  }, [enabledLeagueIds]);
 
   function toggleLeague(leagueRowId: string) {
     setEnabledLeagueIds((prev) => {
