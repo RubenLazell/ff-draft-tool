@@ -5,6 +5,8 @@ import { AddLeagueForm } from "./AddLeagueForm";
 import { TeamPickerButton } from "./TeamPickerButton";
 import { removeLeagueFormAction } from "./actions";
 
+export const metadata = { title: "Leagues" };
+
 export default async function LeaguesPage() {
   const supabase = await createClient();
   const {
@@ -27,28 +29,49 @@ export default async function LeaguesPage() {
           Leagues
         </h1>
         <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-400">
-          Import a Sleeper league to see every team ranked using your own rankings.
+          Import a Sleeper or ESPN league to see every team ranked by your own rankings, build trades,
+          and follow your matchups live.
         </p>
 
-        {hasAnyTeamSet && (
-          <Link
-            href="/leagues/matchups"
-            className="mb-4 inline-block text-sm font-medium underline text-black dark:text-zinc-50"
-          >
-            My Matchups →
-          </Link>
+        {leagues && leagues.length > 0 && (
+          <div className="mb-6 flex flex-col gap-3 rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-5 text-white sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Live Matchups</h2>
+              <p className="text-sm text-emerald-50">
+                {hasAnyTeamSet
+                  ? "Every league's matchup this week, live, under each league's real scoring."
+                  : "Set your team in a league below to follow its matchup live."}
+              </p>
+            </div>
+            {hasAnyTeamSet && (
+              <Link
+                href="/leagues/matchups"
+                className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-white"
+              >
+                Open matchups <span aria-hidden="true">→</span>
+              </Link>
+            )}
+          </div>
         )}
 
-        <div className="mb-8 rounded-lg border border-black/[.08] bg-white p-4 dark:border-white/[.145] dark:bg-zinc-950">
+        <section
+          aria-labelledby="add-league"
+          className="mb-8 rounded-2xl border border-black/[.08] bg-white p-4 dark:border-white/[.145] dark:bg-zinc-950"
+        >
+          <h2 id="add-league" className="mb-3 font-semibold text-black dark:text-zinc-50">
+            Add a league
+          </h2>
           <AddLeagueForm />
-        </div>
+        </section>
 
         {leagues && leagues.length > 0 ? (
+          <>
+          <h2 className="mb-3 font-semibold text-black dark:text-zinc-50">Your leagues</h2>
           <ul className="flex flex-col gap-2">
             {leagues.map((league) => (
               <li
                 key={league.id}
-                className="flex flex-col gap-2 rounded-lg border border-black/[.08] bg-white px-4 py-3 dark:border-white/[.145] dark:bg-zinc-950"
+                className="flex flex-col gap-2 rounded-2xl border border-black/[.08] bg-white px-4 py-3 dark:border-white/[.145] dark:bg-zinc-950"
               >
                 <div className="flex items-center justify-between gap-2">
                   <Link
@@ -57,22 +80,41 @@ export default async function LeaguesPage() {
                   >
                     {league.league_name ?? league.league_id}
                   </Link>
-                  <form action={removeLeagueFormAction.bind(null, league.id)}>
+                  <span className="shrink-0 rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+                    {league.platform === "SLEEPER" ? "Sleeper" : "ESPN"}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                  <Link
+                    href={`/leagues/${league.id}`}
+                    className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                  >
+                    Power rankings
+                  </Link>
+                  <Link
+                    href={`/leagues/${league.id}?view=trade`}
+                    className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                  >
+                    Trade calculator
+                  </Link>
+                  <TeamPickerButton leagueRowId={league.id} myRosterId={league.my_roster_id} />
+                  <form action={removeLeagueFormAction.bind(null, league.id)} className="ml-auto">
                     <button
                       type="submit"
-                      className="shrink-0 text-sm text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
+                      aria-label={`Remove ${league.league_name ?? league.league_id}`}
+                      className="text-sm text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
                     >
                       Remove
                     </button>
                   </form>
                 </div>
-                <TeamPickerButton leagueRowId={league.id} myRosterId={league.my_roster_id} />
               </li>
             ))}
           </ul>
+          </>
         ) : (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No leagues added yet — paste a Sleeper league ID above to get started.
+            No leagues added yet — paste a Sleeper or ESPN league ID above to get started.
           </p>
         )}
       </div>

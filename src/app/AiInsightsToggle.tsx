@@ -30,6 +30,7 @@ export function AiInsightsToggle({
       type="button"
       onClick={handleClick}
       disabled={disabled || isPending}
+      aria-pressed={disabled ? undefined : isEnabled}
       title={
         disabled
           ? disabledReason === "not-authorized"

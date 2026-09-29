@@ -48,7 +48,12 @@ export function TeamPickerButton({
       <button
         type="button"
         onClick={handleOpen}
-        className="shrink-0 text-sm text-zinc-500 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+        aria-expanded={false}
+        className={`shrink-0 text-sm font-medium hover:underline ${
+          myRosterId != null
+            ? "text-zinc-600 dark:text-zinc-400"
+            : "text-amber-700 dark:text-amber-400"
+        }`}
       >
         {myRosterId != null ? "Change team" : "Set your team"}
       </button>
@@ -56,9 +61,10 @@ export function TeamPickerButton({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-black/[.08] p-2 dark:border-white/[.145]">
-      {pending && !teams && <p className="text-xs text-zinc-500 dark:text-zinc-400">Loading teams…</p>}
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+    <div className="flex w-full basis-full flex-col gap-2 rounded-md border border-black/[.08] p-2 dark:border-white/[.145]">
+      <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Which team is yours?</p>
+      {pending && !teams && <p role="status" className="text-xs text-zinc-500 dark:text-zinc-400">Loading teams…</p>}
+      {error && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{error}</p>}
       {teams && (
         <div className="flex flex-wrap gap-1.5">
           {teams.map((t) => (
@@ -67,6 +73,7 @@ export function TeamPickerButton({
               type="button"
               onClick={() => handlePick(t.rosterId)}
               disabled={pending}
+              aria-pressed={t.rosterId === myRosterId}
               className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60 ${
                 t.rosterId === myRosterId
                   ? "border-transparent bg-black text-white dark:bg-white dark:text-black"

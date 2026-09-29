@@ -5,7 +5,7 @@ const CHROME_STORE_URL: string | null =
   "https://chromewebstore.google.com/detail/ff-draft-tool-%E2%80%94-live-draf/nddmcgfljljjbfkajallenamhibhafdp";
 
 export const metadata = {
-  title: "Chrome Extension — FF Draft Tool",
+  title: "Chrome Extension",
 };
 
 export default function ExtensionPage() {

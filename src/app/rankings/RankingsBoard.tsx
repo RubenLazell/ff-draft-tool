@@ -344,6 +344,7 @@ export function RankingsBoard({
             <Link
               key={f}
               href={`${rankingsBase}?format=${f}`}
+              aria-current={format === f ? "page" : undefined}
               className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                 format === f
                   ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
@@ -365,7 +366,7 @@ export function RankingsBoard({
             onClick={() => setShowCheatsheetPicker(true)}
             className="rounded-full border border-black/[.08] px-3 py-1 text-sm font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
           >
-            Create printable draft cheatsheet
+            Print cheatsheet
           </button>
           <button
             onClick={handleRefresh}

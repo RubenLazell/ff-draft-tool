@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrCreateUserRankings, isFormat, FORMAT_LABELS, type Format } from "@/lib/rankings";
 import { CheatsheetView } from "../CheatsheetView";
 
+export const metadata = { title: "Printable Cheatsheet" };
+
 export default async function CheatsheetPage({
   searchParams,
 }: {

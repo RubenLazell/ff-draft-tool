@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Privacy Policy — FF Draft Tool",
+  title: "Privacy Policy",
 };
 
 export default function PrivacyPage() {

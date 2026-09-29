@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getOrCreateUserRankings, isFormat, FORMATS, FORMAT_LABELS, type Format } from "@/lib/rankings";
 import { CompareView } from "../CompareView";
 
+export const metadata = { title: "Head-to-Head" };
+
 export default async function ComparePage({
   searchParams,
 }: {

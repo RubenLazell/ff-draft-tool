@@ -1,99 +1,63 @@
 import Link from "next/link";
+import { SITE_TOOLS } from "@/lib/siteNav";
+import { ToolCard } from "@/app/ToolCard";
+
+export const metadata = { title: "Try as a guest" };
 
 export default function GuestHomePage() {
+  const guestTools = SITE_TOOLS.filter((t) => t.guestHref && t.key !== "extension" && t.key !== "trade");
+  const accountTools = SITE_TOOLS.filter((t) => !t.guestHref || t.key === "extension");
+
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-4 py-10 text-center dark:bg-black">
-      <div className="flex w-full max-w-3xl flex-col items-center gap-8">
-        <div className="flex flex-col items-center gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-            Try it as a guest
-          </h1>
-          <p className="max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-            Every feature below works with no account — changes are saved only in this browser.
-            Sign up any time to save permanently, sync across devices, and use the Chrome extension.
+    <div className="flex flex-1 flex-col bg-zinc-50 px-4 py-10 dark:bg-black">
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">Try it as a guest</h1>
+          <p className="max-w-lg text-sm text-zinc-600 dark:text-zinc-400">
+            These work with no account — changes are saved only in this browser. Sign up any time to save
+            permanently, sync across devices, and unlock the rest.
           </p>
-        </div>
-
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <Link
-            href="/signup"
-            className="flex h-12 w-40 items-center justify-center rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-          >
-            Sign up
-          </Link>
-          <Link
-            href="/login"
-            className="flex h-12 w-40 items-center justify-center rounded-full border border-solid border-black/[.08] px-5 text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
-          >
-            Log in
-          </Link>
-        </div>
-
-        <div className="grid w-full gap-4 text-left sm:grid-cols-2">
-          <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Rankings Board
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Drag-and-drop your own big board, seeded from consensus rankings — search, filter by
-              position, and jump a player straight to a rank.
-            </p>
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/rankings/guest"
-              className="text-sm font-medium underline text-black dark:text-zinc-50"
+              href="/signup"
+              className="flex h-11 items-center justify-center rounded-full bg-emerald-700 px-6 font-medium text-white transition-colors hover:bg-emerald-800"
             >
-              Start ranking →
+              Create a free account
             </Link>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Head-to-Head
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Refine your rankings two players at a time — pick who you&apos;d rather draft, and
-              your board reorders automatically whenever your pick disagrees with it.
-            </p>
             <Link
-              href="/rankings/compare/guest"
-              className="text-sm font-medium underline text-black dark:text-zinc-50"
+              href="/login"
+              className="flex h-11 items-center justify-center rounded-full border border-black/[.12] px-6 font-medium text-black transition-colors hover:bg-black/[.04] dark:border-white/[.2] dark:text-zinc-50 dark:hover:bg-white/[.06]"
             >
-              Start comparing →
-            </Link>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              Printable Cheatsheet
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              A print-ready draft cheat sheet, color-coded by position, generated straight from
-              your rankings.
-            </p>
-            <Link
-              href="/rankings/cheatsheet/guest"
-              className="text-sm font-medium underline text-black dark:text-zinc-50"
-            >
-              Create a cheatsheet →
-            </Link>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border border-black/[.08] bg-white p-5 dark:border-white/[.145] dark:bg-zinc-950">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              League Import
-            </h2>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Paste any Sleeper or ESPN league ID to see every team ranked by strength, with a
-              visual breakdown of where each team&apos;s value comes from.
-            </p>
-            <Link
-              href="/leagues/guest"
-              className="text-sm font-medium underline text-black dark:text-zinc-50"
-            >
-              Preview a league →
+              Log in
             </Link>
           </div>
         </div>
+
+        <section aria-labelledby="guest-tools">
+          <h2 id="guest-tools" className="mb-4 text-lg font-semibold text-black dark:text-zinc-50">
+            No account needed
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {guestTools.map((t) => (
+              <ToolCard key={t.key} tool={t} href={t.guestHref as string} cta="Try it now" />
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="account-tools">
+          <h2 id="account-tools" className="mb-4 text-lg font-semibold text-black dark:text-zinc-50">
+            With a free account
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {accountTools.map((t) =>
+              t.key === "extension" ? (
+                <ToolCard key={t.key} tool={t} href={t.href} cta="Learn more" note="Needs an account to log in" />
+              ) : (
+                <ToolCard key={t.key} tool={t} href="/signup" cta="Sign up to use" note="Free account" />
+              )
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );

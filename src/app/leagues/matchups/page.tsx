@@ -11,6 +11,8 @@ import { buildLiveMatchup, type LiveMatchup } from "@/lib/liveScoring";
 import { MatchupsView } from "./MatchupsView";
 import { LiveRefresh } from "./LiveRefresh";
 
+export const metadata = { title: "Live Matchups" };
+
 function isSuccess(result: MatchupResult): result is Extract<MatchupResult, { error: null }> {
   return result.error === null;
 }

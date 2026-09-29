@@ -5,6 +5,8 @@ import { getOrCreateUserRankings, isFormat, type Format } from "@/lib/rankings";
 import { AI_INSIGHTS_ALLOWED_EMAIL, AI_INSIGHTS_COOKIE } from "@/lib/aiInsights";
 import { RankingsBoard } from "./RankingsBoard";
 
+export const metadata = { title: "My Rankings" };
+
 export default async function RankingsPage({
   searchParams,
 }: {

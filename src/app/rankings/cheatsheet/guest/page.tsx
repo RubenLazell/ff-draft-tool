@@ -2,6 +2,8 @@ import { createServiceRoleClient } from "@/lib/supabase/service";
 import { getDefaultRankings, isFormat, FORMAT_LABELS, type Format } from "@/lib/rankings";
 import { CheatsheetView } from "../../CheatsheetView";
 
+export const metadata = { title: "Printable Cheatsheet (guest)" };
+
 export default async function GuestCheatsheetPage({
   searchParams,
 }: {

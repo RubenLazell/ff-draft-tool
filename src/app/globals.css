@@ -22,7 +22,37 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Visible keyboard focus everywhere. Many inputs/buttons set
+   outline-none for mouse users; :focus-visible only fires for keyboard
+   (and programmatic) focus, so this doesn't show rings on every click. */
+:focus-visible {
+  outline: 2px solid #059669;
+  outline-offset: 2px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #059669 !important;
+  outline-offset: 1px;
+}
+
+/* Reduced motion: drop transitions and the looping glow. The big-play pop
+   is left alone on purpose — it ends at opacity 0, so collapsing its
+   duration would hide the callout entirely rather than just calming it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-glow-pulse,
+  .animate-pulse {
+    animation: none !important;
+  }
 }
 
 /* Score graph "big play" callout — scale/fade pop used when a scoring

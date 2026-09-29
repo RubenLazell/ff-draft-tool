@@ -2,6 +2,8 @@ import { createServiceRoleClient } from "@/lib/supabase/service";
 import { getDefaultRankings, isFormat, type Format } from "@/lib/rankings";
 import { RankingsBoard } from "../RankingsBoard";
 
+export const metadata = { title: "Rankings (guest)" };
+
 export default async function GuestRankingsPage({
   searchParams,
 }: {

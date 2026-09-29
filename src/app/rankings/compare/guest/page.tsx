@@ -2,6 +2,8 @@ import { createServiceRoleClient } from "@/lib/supabase/service";
 import { getDefaultRankings, isFormat, FORMATS, FORMAT_LABELS, type Format } from "@/lib/rankings";
 import { CompareView } from "../../CompareView";
 
+export const metadata = { title: "Head-to-Head (guest)" };
+
 export default async function GuestComparePage({
   searchParams,
 }: {

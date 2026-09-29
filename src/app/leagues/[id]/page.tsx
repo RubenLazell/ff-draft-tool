@@ -10,7 +10,7 @@ export default async function LeagueDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ format?: string }>;
+  searchParams: Promise<{ format?: string; view?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -27,7 +27,7 @@ export default async function LeagueDetailPage({
     .single();
   if (!savedLeague) notFound();
 
-  const { format: rawFormat } = await searchParams;
+  const { format: rawFormat, view } = await searchParams;
   const format: Format = rawFormat && isFormat(rawFormat) ? rawFormat : "PPR";
   const rankings = await getOrCreateUserRankings(supabase, user.id, format);
 
@@ -67,6 +67,7 @@ export default async function LeagueDetailPage({
       format={format}
       formats={FORMATS}
       formatLabels={FORMAT_LABELS}
+      initialView={view === "trade" ? "trade" : "rankings"}
     />
   );
 }

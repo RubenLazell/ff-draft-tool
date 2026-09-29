@@ -26,6 +26,9 @@ type LeagueDetailViewProps = {
   format: Format;
   formats: readonly Format[];
   formatLabels: Record<Format, string>;
+  // Deep link straight into the trade calculator (/leagues/[id]?view=trade)
+  // rather than making people find the toggle on the rankings view.
+  initialView?: "rankings" | "trade";
 } & (
   | { leagueRowId: string; guestMode?: false; onFormatChange?: undefined; onReset?: undefined }
   | { leagueRowId?: undefined; guestMode: true; onFormatChange: (format: Format) => void; onReset: () => void }
@@ -34,7 +37,7 @@ type LeagueDetailViewProps = {
 export function LeagueDetailView(props: LeagueDetailViewProps) {
   const { leagueName, results, rankings, league, format, formats, formatLabels, guestMode } = props;
   const [expandedRosterId, setExpandedRosterId] = useState<number | null>(null);
-  const [showTrade, setShowTrade] = useState(false);
+  const [showTrade, setShowTrade] = useState(props.initialView === "trade");
   const maxScore = Math.max(1, ...results.map((t) => t.score));
 
   return (
@@ -84,7 +87,8 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
             ) : (
               <Link
                 key={f}
-                href={`/leagues/${props.leagueRowId}?format=${f}`}
+                href={`/leagues/${props.leagueRowId}?format=${f}${showTrade ? "&view=trade" : ""}`}
+                aria-current={format === f ? "page" : undefined}
                 className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                   format === f
                     ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
@@ -97,18 +101,29 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
           )}
         </div>
 
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setShowTrade((v) => !v)}
-            className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
-              showTrade
-                ? "border-transparent bg-black text-white dark:bg-white dark:text-black"
-                : "border-black/[.08] text-black hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
-            }`}
-          >
-            {showTrade ? "← Back to rankings" : "Trade Calculator"}
-          </button>
+        <div
+          role="group"
+          aria-label="View"
+          className="mb-4 inline-flex rounded-full border border-black/[.08] bg-white p-1 dark:border-white/[.145] dark:bg-zinc-950"
+        >
+          {[
+            { trade: false, label: "Power rankings" },
+            { trade: true, label: "Trade calculator" },
+          ].map((v) => (
+            <button
+              key={v.label}
+              type="button"
+              aria-pressed={showTrade === v.trade}
+              onClick={() => setShowTrade(v.trade)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                showTrade === v.trade
+                  ? "bg-emerald-700 text-white"
+                  : "text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
         </div>
 
         {showTrade ? (

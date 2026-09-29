@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
+import { NavLinks } from "./NavLinks";
 
 export async function Navbar() {
   const supabase = await createClient();
@@ -9,72 +10,51 @@ export async function Navbar() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center justify-between border-b border-black/[.08] bg-white/80 px-4 backdrop-blur sm:px-6 dark:border-white/[.145] dark:bg-black/80">
-      <Link
-        href="/"
-        className="text-sm font-semibold tracking-tight text-black dark:text-zinc-50"
-      >
-        FF Draft Tool
-      </Link>
-      <nav className="flex items-center gap-3 text-sm font-medium sm:gap-4">
-        {user ? (
-          <>
-            <Link
-              href="/rankings"
-              className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              My Rankings
-            </Link>
-            <Link
-              href="/rankings/compare"
-              className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              Head-to-head
-            </Link>
-            <Link
-              href="/leagues"
-              className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              Leagues
-            </Link>
-            <Link
-              href="/extension"
-              className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              Extension
-            </Link>
+    <header className="sticky top-0 z-50 print:hidden border-b border-black/[.08] bg-white/85 backdrop-blur dark:border-white/[.145] dark:bg-black/85">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 text-sm font-semibold tracking-tight text-black dark:text-zinc-50"
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-700 text-xs font-bold text-white"
+          >
+            FF
+          </span>
+          {/* Wordmark drops on the narrowest phones so Menu + auth buttons fit. */}
+          <span className="max-[380px]:sr-only">FF Draft Tool</span>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <NavLinks signedIn={!!user} />
+          {user ? (
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-full border border-black/[.08] px-3 py-1 text-black transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:text-zinc-50 dark:hover:bg-[#1a1a1a]"
+                className="h-9 rounded-full px-3 text-sm font-medium text-zinc-600 transition-colors hover:bg-black/[.04] hover:text-black dark:text-zinc-400 dark:hover:bg-white/[.06] dark:hover:text-zinc-50"
               >
                 Log out
               </button>
             </form>
-          </>
-        ) : (
-          <>
-            <Link
-              href="/guest"
-              className="hidden text-zinc-600 hover:text-black sm:inline dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              Try as guest
-            </Link>
-            <Link
-              href="/login"
-              className="text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-full bg-foreground px-3 py-1 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-            >
-              Sign up
-            </Link>
-          </>
-        )}
-      </nav>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden h-9 items-center whitespace-nowrap rounded-full px-3 text-sm font-medium text-zinc-600 sm:flex hover:bg-black/[.04] hover:text-black dark:text-zinc-400 dark:hover:bg-white/[.06] dark:hover:text-zinc-50"
+              >
+                Log in
+              </Link>
+              <Link
+                href="/signup"
+                className="flex h-9 items-center whitespace-nowrap rounded-full bg-emerald-700 px-4 text-sm font-medium text-white transition-colors hover:bg-emerald-800"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
     </header>
   );
 }
