@@ -43,12 +43,12 @@ export default function ExtensionPage() {
             <div className="flex flex-col gap-3">
               <p className="text-sm text-zinc-600 dark:text-zinc-300">
                 This extension has been submitted to the Chrome Web Store and
-                is currently waiting on Google&apos;s review — this can take
+                is currently waiting on Google&apos;s review, this can take
                 anywhere from a few hours to a few days. Once it&apos;s
                 approved, the official install link will appear right here.
               </p>
               <p className="text-sm text-zinc-600 dark:text-zinc-300">
-                In the meantime, you can install it manually — see the steps
+                In the meantime, you can install it manually, see the steps
                 below. It&apos;s the exact same extension, just installed a
                 different way.
               </p>
@@ -76,7 +76,7 @@ export default function ExtensionPage() {
               <li>
                 Unzip it somewhere you&apos;ll keep it (right-click the file →{" "}
                 <strong>Extract All</strong> on Windows, or double-click it on
-                Mac) — don&apos;t delete this folder afterward, Chrome loads
+                Mac), don&apos;t delete this folder afterward, Chrome loads
                 the extension from it directly.
               </li>
               <li>
@@ -87,17 +87,17 @@ export default function ExtensionPage() {
                 .
               </li>
               <li>
-                Turn on <strong>Developer mode</strong> — a toggle in the
+                Turn on <strong>Developer mode</strong>, a toggle in the
                 top-right corner of that page.
               </li>
               <li>
                 Click <strong>Load unpacked</strong> (top-left) and select the
-                unzipped <code>extension</code> folder — the one that directly
+                unzipped <code>extension</code> folder, the one that directly
                 contains a file named <code>manifest.json</code>.
               </li>
               <li>
                 The FF Draft Tool icon should now appear in your browser
-                toolbar. That&apos;s it — installed.
+                toolbar. That&apos;s it, installed.
               </li>
             </ol>
           </section>
@@ -110,26 +110,26 @@ export default function ExtensionPage() {
               Make sure you&apos;ve built your rankings first at{" "}
               <Link href="/rankings" className="underline">
                 /rankings
-              </Link>{" "}
-              — the extension shows whatever board you&apos;ve set up here.
+              </Link>
+              , the extension shows whatever board you&apos;ve set up here.
             </li>
             <li>
               Click the FF Draft Tool icon in your Chrome toolbar and log in
               with your account on this site (same email/password).
             </li>
             <li>
-              Pick a scoring format and how many players you want to see —
-              overall, and per position — then hit Save.
+              Pick a scoring format and how many players you want to see,
+              overall, and per position, then hit Save.
             </li>
             <li>
               Open a draft on ESPN or Sleeper (mock or real). A panel appears
               automatically showing your next-best available players,
-              updating live as picks happen — no need to refresh or tab
+              updating live as picks happen, no need to refresh or tab
               away.
             </li>
             <li>
               Drag the panel by its header to move it, resize it from the
-              bottom-right corner, or click × to hide it — it stays hidden
+              bottom-right corner, or click × to hide it, it stays hidden
               on every ESPN/Sleeper tab until you bring it back from the
               extension&apos;s popup with &ldquo;Show panel&rdquo;. If it
               ever ends up somewhere awkward, the popup also has a

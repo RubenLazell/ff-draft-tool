@@ -376,7 +376,7 @@ export function ScoreGraph({
 
         {!error && !loading && !hasEnoughData && (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Still collecting data for this matchup — check back once the game gets going. The graph fills in from
+            Still collecting data for this matchup, check back once the game gets going. The graph fills in from
             whenever you first watch a matchup live, so leaving this tab open during the game gives the fullest
             picture.
           </p>
@@ -626,7 +626,7 @@ export function ScoreGraph({
             </div>
 
             <p className="mt-3 text-center text-xs text-zinc-400 dark:text-zinc-600">
-              A sped-up replay of your recorded snapshots — it lingers on busier slates, skips the gaps between
+              A sped-up replay of your recorded snapshots, it lingers on busier slates, skips the gaps between
               them, and pauses briefly on every big play. Descriptions are a best guess from which stat moved
               between snapshots, not confirmed play-by-play.
             </p>

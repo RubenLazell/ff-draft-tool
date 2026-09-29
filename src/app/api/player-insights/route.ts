@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "user",
-          content: `Search the web to confirm ${player.full_name}'s current NFL team, depth chart situation, and any recent news (trades, injuries, signings) — your training data may be outdated on this. Then give a fantasy football strength and a fantasy football concern for ${player.full_name} (${player.position}${player.team ? `, ${player.team}` : ""}). Each must be a single short sentence, no more than 15 words, specific to this player and grounded in current information. No preamble, no hedging, no filler phrases.`,
+          content: `Search the web to confirm ${player.full_name}'s current NFL team, depth chart situation, and any recent news (trades, injuries, signings) — your training data may be outdated on this. Then give a fantasy football strength and a fantasy football concern for ${player.full_name} (${player.position}${player.team ? `, ${player.team}` : ""}). Each must be a single short sentence, no more than 15 words, specific to this player and grounded in current information. No preamble, no hedging, no filler phrases. Never use em dashes; use commas instead.`,
         },
       ],
     });

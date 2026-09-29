@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     default: "FF Draft Tool",
-    template: "%s — FF Draft Tool",
+    template: "%s | FF Draft Tool",
   },
   description:
     "Your own fantasy football rankings, live matchups under your league's real scoring, league power rankings and a trade calculator.",

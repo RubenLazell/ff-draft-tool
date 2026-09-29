@@ -89,7 +89,7 @@ export function GuestLeaguePreview() {
             Preview a league
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            See any Sleeper or ESPN league&apos;s teams ranked using default consensus rankings —
+            See any Sleeper or ESPN league&apos;s teams ranked using default consensus rankings,
             nothing is saved. Sign up to use your own rankings and keep leagues for next time.
           </p>
         </div>

@@ -23,19 +23,19 @@ export default function PrivacyPage() {
           <h2 className="text-base font-semibold">What we collect</h2>
           <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
             <li>
-              <strong>Account info</strong> — your email address and password,
+              <strong>Account info</strong>, your email address and password,
               used only to log you in. Passwords are handled directly by our
               authentication provider, Supabase; we never see or store them
               in plain text.
             </li>
             <li>
-              <strong>Your rankings</strong> — the player order you create on
+              <strong>Your rankings</strong>, the player order you create on
               the site, so it can be shown back to you (on the site and in
               the extension) and edited across sessions.
             </li>
             <li>
               <strong>AI insight requests</strong> (only if you enable that
-              feature) — a player&apos;s name, position, and team are sent to
+              feature), a player&apos;s name, position, and team are sent to
               Anthropic&apos;s Claude API to generate a short scouting note.
               No account or personal information is included in that
               request.

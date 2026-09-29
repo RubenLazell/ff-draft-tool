@@ -14,7 +14,7 @@ export default function GuestHomePage() {
         <div className="flex flex-col items-center gap-3 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">Try it as a guest</h1>
           <p className="max-w-lg text-sm text-zinc-600 dark:text-zinc-400">
-            These work with no account — changes are saved only in this browser. Sign up any time to save
+            These work with no account, changes are saved only in this browser. Sign up any time to save
             permanently, sync across devices, and unlock the rest.
           </p>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row">

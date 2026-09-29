@@ -24,7 +24,7 @@ export const SITE_TOOLS: SiteTool[] = [
     label: "Live Matchups",
     navLabel: "Matchups",
     description:
-      "Every league's matchup in one place — live scores under your league's real scoring, win %, and a replayable score graph.",
+      "Every league's matchup in one place, live scores under your league's real scoring, win %, and a replayable score graph.",
     href: "/leagues/matchups",
     guestHref: null,
     group: "season",
@@ -57,7 +57,7 @@ export const SITE_TOOLS: SiteTool[] = [
     label: "Rankings Board",
     navLabel: "Rankings",
     description:
-      "Your own drag-and-drop big board, seeded from consensus — search, filter by position, jump a player to a rank.",
+      "Your own drag-and-drop big board, seeded from consensus. Search, filter by position, and jump a player to any rank.",
     href: "/rankings",
     guestHref: "/rankings/guest",
     group: "draft",
@@ -68,7 +68,7 @@ export const SITE_TOOLS: SiteTool[] = [
     label: "Head-to-Head",
     navLabel: "Head-to-head",
     description:
-      "Refine your board two players at a time — pick who you'd rather have and your rankings reorder themselves.",
+      "Refine your board two players at a time, pick who you'd rather have and your rankings reorder themselves.",
     href: "/rankings/compare",
     guestHref: "/rankings/compare/guest",
     group: "draft",

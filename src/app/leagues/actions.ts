@@ -65,7 +65,7 @@ export async function addEspnLeague(
       return {
         error: credentials
           ? "Those cookies didn't work for this league. Double-check SWID and espn_s2 and try again."
-          : "This looks like a private league — paste your SWID and espn_s2 cookies below and try again.",
+          : "This looks like a private league, paste your SWID and espn_s2 cookies below and try again.",
       };
     }
     throw err;

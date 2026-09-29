@@ -114,7 +114,7 @@ export default async function LeaguesPage() {
           </>
         ) : (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No leagues added yet — paste a Sleeper or ESPN league ID above to get started.
+            No leagues added yet, paste a Sleeper or ESPN league ID above to get started.
           </p>
         )}
       </div>

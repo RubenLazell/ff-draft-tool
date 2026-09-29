@@ -457,7 +457,7 @@ export function RankingsBoard({
       </div>
 
       <p className="mb-2 text-xs text-zinc-500 sm:hidden dark:text-zinc-400">
-        Tip: press and hold a row to drag it — a quick swipe just scrolls.
+        Tip: press and hold a row to drag it, a quick swipe just scrolls.
       </p>
 
       <DndContext
@@ -632,7 +632,7 @@ function RowContent({
               onToggleDetails?.(player.playerId, e.currentTarget.getBoundingClientRect());
             }}
             className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-bold ${injuryBadge.className}`}
-            title={`${player.injuryStatus} — click for injury outlook`}
+            title={`${player.injuryStatus}, click for injury outlook`}
           >
             {injuryBadge.label}
           </button>

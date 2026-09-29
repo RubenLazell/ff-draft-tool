@@ -49,7 +49,7 @@ export default async function MatchupsPage() {
       fetchSleeperWeekStats(season, week),
     ]);
   } catch {
-    scheduleError = "Couldn't load the NFL schedule right now — try again later.";
+    scheduleError = "Couldn't load the NFL schedule right now, try again later.";
   }
 
   const cards = await Promise.all(
@@ -181,7 +181,7 @@ export default async function MatchupsPage() {
           <div>
             <h1 className="mb-1 text-xl font-semibold text-black sm:text-2xl dark:text-zinc-50">My Matchups</h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Week {week} — live projections and win % from Sleeper&apos;s stats feed, updating as games play.
+              Week {week}, live projections and win % from Sleeper&apos;s stats feed, updating as games play.
             </p>
           </div>
           <LiveRefresh />
@@ -189,7 +189,7 @@ export default async function MatchupsPage() {
 
         {cards.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            No leagues set up yet — go to{" "}
+            No leagues set up yet, go to{" "}
             <Link href="/leagues" className="underline">
               Leagues
             </Link>{" "}

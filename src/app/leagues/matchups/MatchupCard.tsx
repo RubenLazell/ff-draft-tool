@@ -88,7 +88,7 @@ export function MatchupCard({
           <span className="text-xs text-zinc-500 dark:text-zinc-400">Week {week}</span>
         </div>
         <p className="mb-2 text-sm text-zinc-500 dark:text-zinc-400">
-          {opponent ? "Couldn't load live scoring right now." : "Bye week — no opponent this week."}
+          {opponent ? "Couldn't load live scoring right now." : "Bye week, no opponent this week."}
         </p>
         <p className="mb-1 text-sm font-medium text-black dark:text-zinc-50">{myTeam.teamName}</p>
       </div>

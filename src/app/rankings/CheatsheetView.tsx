@@ -113,7 +113,7 @@ export function CheatsheetView({
       </div>
 
       <h1 className="mb-1 text-2xl font-bold text-black dark:text-zinc-50 print:mb-0.5 print:text-lg">
-        Draft Cheat Sheet — {formatLabel}
+        Draft Cheat Sheet, {formatLabel}
       </h1>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400 print:hidden">
         {visibleRanks.length} players
@@ -192,10 +192,10 @@ function CheatsheetRow({ player }: { player: DisplayPlayer }) {
         {player.team ?? "FA"}
       </span>
       <span className="w-16 shrink-0 text-zinc-500 dark:text-zinc-400">
-        {player.byeWeek != null ? `Bye ${player.byeWeek}` : "—"}
+        {player.byeWeek != null ? `Bye ${player.byeWeek}` : "-"}
       </span>
       <span className="w-20 shrink-0 text-zinc-500 dark:text-zinc-400">
-        {player.consensusRank != null ? `ADP ${player.consensusRank.toFixed(1)}` : "—"}
+        {player.consensusRank != null ? `ADP ${player.consensusRank.toFixed(1)}` : "-"}
       </span>
       {delta != null ? (
         <span

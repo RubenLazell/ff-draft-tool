@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "user",
-          content: `Search the web for the latest news on ${player.full_name}'s (${player.position}${player.team ? `, ${player.team}` : ""}) current injury (listed status: ${player.injury_status}${player.injury_body_part ? `, ${player.injury_body_part}` : ""}). Find the most recent reporting on severity and recovery timeline. Give: (1) "summary" — one sentence, under 25 words, on what the injury is and current severity/consensus, including nuance or caveats here; (2) "expectedReturn" — a short label only, 6 words max (e.g. "Week 12", "2-3 weeks", "Week-to-week", "Unclear") — no explanation or caveats in this field, those belong in summary. No hedging filler, no preamble.`,
+          content: `Search the web for the latest news on ${player.full_name}'s (${player.position}${player.team ? `, ${player.team}` : ""}) current injury (listed status: ${player.injury_status}${player.injury_body_part ? `, ${player.injury_body_part}` : ""}). Find the most recent reporting on severity and recovery timeline. Give: (1) "summary" — one sentence, under 25 words, on what the injury is and current severity/consensus, including nuance or caveats here; (2) "expectedReturn" — a short label only, 6 words max (e.g. "Week 12", "2-3 weeks", "Week-to-week", "Unclear") — no explanation or caveats in this field, those belong in summary. No hedging filler, no preamble. Never use em dashes; use commas instead.`,
         },
       ],
     });

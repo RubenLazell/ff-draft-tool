@@ -64,7 +64,7 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
           {leagueName}
         </h1>
         <p className="mb-4 text-sm text-zinc-600 sm:mb-6 dark:text-zinc-400">
-          Teams ranked by Value Over Replacement — your rankings applied to each team&apos;s
+          Teams ranked by Value Over Replacement, your rankings applied to each team&apos;s
           optimal starting lineup, plus a discounted bench. IDP/exotic slots aren&apos;t scored
           (no ranking data for them).
         </p>

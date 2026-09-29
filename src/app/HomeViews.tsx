@@ -118,7 +118,7 @@ export function HomeDashboard({
             {GROUP_LABELS.draft}
           </h2>
           <p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-            Your rankings drive everything above — keep them sharp.
+            Your rankings drive everything above, keep them sharp.
           </p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {DRAFT_TOOLS.map((t) => (
@@ -137,7 +137,7 @@ export function HomeDashboard({
                 AI Insights
               </h2>
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                AI-generated strength/concern and injury research on player cards in your rankings — off by
+                AI-generated strength/concern and injury research on player cards in your rankings, off by
                 default since each one costs a small amount to generate.
               </p>
             </div>
@@ -208,7 +208,7 @@ export function LandingPage() {
             Your rankings. Your league&apos;s scoring. One place.
           </h1>
           <p className="max-w-xl text-lg text-zinc-600 dark:text-zinc-400">
-            Build your own big board, take it into the draft room, then follow every matchup live — scored
+            Build your own big board, take it into the draft room, then follow every matchup live, scored
             exactly the way your Sleeper or ESPN league scores it.
           </p>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
