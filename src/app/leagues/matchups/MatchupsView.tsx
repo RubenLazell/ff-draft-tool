@@ -138,13 +138,20 @@ function GameBody({
                 {leagueName}
               </p>
             )}
-            <div className="mb-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <p className="truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{myTeamName}</p>
-              <p className="truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{opponentTeamName}</p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <LeagueSide entries={mine} />
-              <LeagueSide entries={theirs} />
+            {/* Each side is one unit — team name directly above its own
+                players — so on mobile, where the two stack, a list can't
+                end up under the wrong team's name. Side by side on
+                desktop, unchanged. The colored left edge (mobile only)
+                marks yours vs. theirs at a glance once they're stacked. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+              <div className="min-w-0 border-l-2 border-emerald-500 pl-2 sm:border-l-0 sm:pl-0">
+                <p className="mb-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{myTeamName}</p>
+                <LeagueSide entries={mine} />
+              </div>
+              <div className="min-w-0 border-l-2 border-zinc-300 pl-2 sm:border-l-0 sm:pl-0 dark:border-zinc-700">
+                <p className="mb-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{opponentTeamName}</p>
+                <LeagueSide entries={theirs} />
+              </div>
             </div>
           </div>
         );
