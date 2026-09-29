@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchNflSchedule } from "@/lib/nflSchedule";
+import type { SlateGame } from "@/lib/slatePacing";
 
 export type SnapshotPlayer = {
   playerId: string;
@@ -66,4 +68,14 @@ export async function getMatchupSnapshots(
   }));
 
   return { error: null, snapshots };
+}
+
+// Public NFL schedule data, not per-user — no ownership check needed, same
+// trust level as every other unauthenticated call to fetchNflSchedule
+// elsewhere in this app. Thin proxy: the score graph (a client component)
+// can't call fetchNflSchedule directly, only "use server" exports.
+export async function getWeekSlates(week: number): Promise<SlateGame[]> {
+  const season = String(new Date().getFullYear());
+  const schedule = await fetchNflSchedule(week, season);
+  return schedule.map((g) => ({ slate: g.slate, kickoff: g.kickoff }));
 }

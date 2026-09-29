@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { getMatchupSnapshots, type MatchupSnapshot } from "./actions";
+import { getMatchupSnapshots, getWeekSlates, type MatchupSnapshot } from "./actions";
+import {
+  buildPositions,
+  buildSlateMarkers,
+  buildSlateWindows,
+  playDurationMs as computePlayDurationMs,
+  type SlateGame,
+} from "@/lib/slatePacing";
 
 // A point delta between two consecutive snapshots at/above this is treated
 // as a "big play" worth celebrating — tuned to catch most TDs without
@@ -9,7 +16,6 @@ import { getMatchupSnapshots, type MatchupSnapshot } from "./actions";
 // happened (this app only ever sees point totals, not play-by-play), just
 // a fun, honestly-approximate heuristic.
 const BIG_PLAY_THRESHOLD = 4;
-const PLAY_DURATION_MS = 9000; // slow, deliberate replay — not a race
 const PAUSE_MS = 1800; // playback freezes on a big play so there's time to actually read it
 const OVERLAY_MS = PAUSE_MS; // the celebration stays up for exactly the pause, then playback resumes as it fades
 
@@ -27,15 +33,8 @@ const WIN_VIEW_H = 64;
 const WIN_PAD_TOP = 10;
 const WIN_PAD_BOTTOM = 10;
 
-// A matchup week spans Thursday through Monday — the real gaps between
-// games (hours, sometimes days) would otherwise swallow almost all the
-// chart's width, squeezing each actual game's action into a sliver. Any
-// gap between consecutive snapshots beyond this cap only "counts" as this
-// many ms of chart space (with a dashed marker + timestamp drawn at the
-// cut, same idea as a stock chart skipping over a weekend) — real
-// within-game gaps (normally ~30s, this app's poll interval) are always
-// far under the cap and render at their true relative spacing.
-const GAP_CAP_MS = 10 * 60_000;
+// Replay pacing (slate-density-aware, gaps skipped) lives in
+// src/lib/slatePacing.ts.
 
 type ChartEvent = {
   side: "mine" | "theirs";
@@ -46,7 +45,6 @@ type ChartEvent = {
   description: string; // e.g. "TD catch", "42-yd run", or a generic point-jump fallback
   isTouchdown: boolean;
 };
-type GapMarker = { position: number; label: string };
 
 // Guesses what actually happened from which raw stat category moved
 // between two snapshots — not confirmed play-by-play (this app only ever
@@ -104,26 +102,6 @@ function formatTick(ms: number) {
     hour: "numeric",
     minute: "2-digit",
   });
-}
-
-// Compressed x-domain: each snapshot's "chart position" is the sum of the
-// (capped) gaps before it, rather than its raw timestamp — see GAP_CAP_MS.
-function buildPositions(times: number[]): number[] {
-  const positions = [0];
-  for (let i = 1; i < times.length; i++) {
-    positions.push(positions[i - 1] + Math.min(times[i] - times[i - 1], GAP_CAP_MS));
-  }
-  return positions;
-}
-
-function buildGapMarkers(times: number[], positions: number[]): GapMarker[] {
-  const markers: GapMarker[] = [];
-  for (let i = 1; i < times.length; i++) {
-    if (times[i] - times[i - 1] > GAP_CAP_MS) {
-      markers.push({ position: positions[i], label: formatTick(times[i]) });
-    }
-  }
-  return markers;
 }
 
 // Value interpolated at a given 0..1 progress along the compressed
@@ -197,6 +175,9 @@ export function ScoreGraph({
   // page, not just within its own <svg>).
   const clipId = useId();
   const [snapshots, setSnapshots] = useState<MatchupSnapshot[] | null>(null);
+  // null while loading; [] if the schedule couldn't be fetched, which
+  // falls back to wall-clock pacing rather than breaking the graph.
+  const [slateGames, setSlateGames] = useState<SlateGame[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Defaults to fully drawn (latest totals) so opening the graph shows
   // something useful immediately — Play resets to 0 and animates back up.
@@ -218,14 +199,23 @@ export function ScoreGraph({
       if (res.error !== null) setError(res.error);
       else setSnapshots(res.snapshots);
     });
+    getWeekSlates(week)
+      .then((games) => {
+        if (!cancelled) setSlateGames(games);
+      })
+      .catch(() => {
+        if (!cancelled) setSlateGames([]);
+      });
     return () => {
       cancelled = true;
     };
   }, [leagueRowId, week]);
 
   const times = useMemo(() => (snapshots ?? []).map((s) => new Date(s.capturedAt).getTime()), [snapshots]);
-  const positions = useMemo(() => buildPositions(times), [times]);
-  const gapMarkers = useMemo(() => buildGapMarkers(times, positions), [times, positions]);
+  const windows = useMemo(() => buildSlateWindows(slateGames ?? [], times), [slateGames, times]);
+  const positions = useMemo(() => buildPositions(times, windows), [times, windows]);
+  const slateMarkers = useMemo(() => buildSlateMarkers(windows, times), [windows, times]);
+  const playDurationMs = computePlayDurationMs(positions, windows);
   const events = useMemo(
     () => (snapshots && snapshots.length >= 2 ? buildEvents(snapshots, positions) : []),
     [snapshots, positions]
@@ -233,9 +223,12 @@ export function ScoreGraph({
 
   useEffect(() => {
     if (!playing || !snapshots || snapshots.length < 2) return;
+    // Captured when playback (re)starts — 0 for a fresh play, the paused
+    // spot when resuming — so the clock picks up from there.
+    const startProgress = progress;
 
     function tick(now: number) {
-      if (startRef.current == null) startRef.current = now;
+      if (startRef.current == null) startRef.current = now - startProgress * playDurationMs;
 
       // Mid-replay freeze from a previous big play: hold progress exactly
       // where it was until the pause elapses, then shift startRef forward
@@ -253,7 +246,7 @@ export function ScoreGraph({
       }
 
       const elapsed = now - startRef.current;
-      const next = Math.min(1, elapsed / PLAY_DURATION_MS);
+      const next = Math.min(1, elapsed / playDurationMs);
       setProgress(next);
 
       const newEventIdx = events.findIndex((ev, idx) => ev.fraction <= next && !shownFractions.current.has(idx));
@@ -288,18 +281,30 @@ export function ScoreGraph({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playing]);
 
-  function handlePlay() {
-    shownFractions.current = new Set();
-    setVisibleEvents([]);
+  // One button: Pause while playing, Resume from a mid-replay stop, Play
+  // (from the start) once finished or before the first play. A replay
+  // this long needs a way to stop it.
+  function handlePlayPause() {
     startRef.current = null;
     pauseUntilRef.current = null;
     pauseStartedAtRef.current = null;
     setPaused(false);
-    setProgress(0);
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (progress >= 1) {
+      shownFractions.current = new Set();
+      setVisibleEvents([]);
+      setProgress(0);
+    }
     setPlaying(true);
   }
 
-  const hasEnoughData = snapshots != null && snapshots.length >= 2;
+  // Waits for the schedule too, so the chart doesn't first render on
+  // fallback pacing and then jump once the slates arrive.
+  const loading = snapshots === null || slateGames === null;
+  const hasEnoughData = !loading && snapshots.length >= 2;
 
   const yMax = useMemo(() => {
     if (!snapshots) return 10;
@@ -367,11 +372,9 @@ export function ScoreGraph({
 
         {error && <p className="text-sm text-zinc-500 dark:text-zinc-400">{error}</p>}
 
-        {!error && snapshots === null && (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
-        )}
+        {!error && loading && <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>}
 
-        {!error && snapshots !== null && !hasEnoughData && (
+        {!error && !loading && !hasEnoughData && (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             Still collecting data for this matchup — check back once the game gets going. The graph fills in from
             whenever you first watch a matchup live, so leaving this tab open during the game gives the fullest
@@ -432,46 +435,58 @@ export function ScoreGraph({
                   </g>
                 ))}
 
-                {/* gap markers — a real-time skip (different day/slate), see GAP_CAP_MS */}
-                {gapMarkers.map((m, i) => (
-                  <g key={i}>
-                    <line
-                      x1={scaleX(m.position)}
-                      x2={scaleX(m.position)}
-                      y1={PAD_TOP}
-                      y2={VIEW_H - PAD_BOTTOM}
-                      className="stroke-black/[.15] dark:stroke-white/[.2]"
-                      strokeWidth={1}
-                      strokeDasharray="3 3"
-                    />
+                {/* One tick per real broadcast slate, at its kickoff. A
+                    label too close to the previous one is dropped (the
+                    tick line stays) so they never overlap. */}
+                {slateMarkers.map((m, i) => {
+                  const x = scaleX(m.position);
+                  const prevX = i > 0 ? scaleX(slateMarkers[i - 1].position) : -Infinity;
+                  return (
+                    <g key={i}>
+                      <line
+                        x1={x}
+                        x2={x}
+                        y1={PAD_TOP}
+                        y2={VIEW_H - PAD_BOTTOM}
+                        className="stroke-black/[.15] dark:stroke-white/[.2]"
+                        strokeWidth={1}
+                        strokeDasharray="3 3"
+                      />
+                      {x - prevX >= 36 && (
+                        <text
+                          x={x + 2}
+                          y={VIEW_H - PAD_BOTTOM + 12}
+                          textAnchor="start"
+                          className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
+                        >
+                          {m.label}
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+
+                {/* Fallback only (schedule unavailable): plain start/end times. */}
+                {slateMarkers.length === 0 && (
+                  <>
                     <text
-                      x={scaleX(m.position)}
+                      x={scaleX(positions[0])}
                       y={VIEW_H - PAD_BOTTOM + 12}
-                      textAnchor="middle"
+                      textAnchor="start"
                       className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
                     >
-                      {m.label}
+                      {formatTick(times[0])}
                     </text>
-                  </g>
-                ))}
-
-                {/* start/end time labels */}
-                <text
-                  x={scaleX(positions[0])}
-                  y={VIEW_H - PAD_BOTTOM + 12}
-                  textAnchor="start"
-                  className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
-                >
-                  {formatTick(times[0])}
-                </text>
-                <text
-                  x={scaleX(positions[positions.length - 1])}
-                  y={VIEW_H - PAD_BOTTOM + 12}
-                  textAnchor="end"
-                  className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
-                >
-                  {formatTick(times[times.length - 1])}
-                </text>
+                    <text
+                      x={scaleX(positions[positions.length - 1])}
+                      y={VIEW_H - PAD_BOTTOM + 12}
+                      textAnchor="end"
+                      className="fill-zinc-400 text-[9px] dark:fill-zinc-600"
+                    >
+                      {formatTick(times[times.length - 1])}
+                    </text>
+                  </>
+                )}
 
                 <line
                   x1={PAD_LEFT}
@@ -603,17 +618,17 @@ export function ScoreGraph({
             <div className="mt-3 flex items-center justify-center">
               <button
                 type="button"
-                onClick={handlePlay}
-                disabled={playing}
-                className="inline-flex h-9 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
+                onClick={handlePlayPause}
+                className="inline-flex h-9 items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
               >
-                {playing ? "Playing…" : "▶ Play"}
+                {playing ? "❚❚ Pause" : progress > 0 && progress < 1 ? "▶ Resume" : "▶ Play"}
               </button>
             </div>
 
             <p className="mt-3 text-center text-xs text-zinc-400 dark:text-zinc-600">
-              A sped-up replay of your recorded snapshots, not real time — it pauses briefly on every big play.
-              Descriptions are a best guess from which stat moved between snapshots, not confirmed play-by-play.
+              A sped-up replay of your recorded snapshots — it lingers on busier slates, skips the gaps between
+              them, and pauses briefly on every big play. Descriptions are a best guess from which stat moved
+              between snapshots, not confirmed play-by-play.
             </p>
           </>
         )}
