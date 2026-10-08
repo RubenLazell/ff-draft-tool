@@ -41,6 +41,17 @@ export const SITE_TOOLS: SiteTool[] = [
     group: "season",
   },
   {
+    key: "finder",
+    cta: "Find a trade",
+    label: "Trade Finder",
+    navLabel: "Trade finder",
+    description:
+      "Name the position you need and get trade ideas that improve your team by your rankings and still look fair to the other manager.",
+    href: "/leagues",
+    guestHref: "/leagues/guest",
+    group: "season",
+  },
+  {
     key: "trade",
     cta: "Build a trade",
     label: "Trade Calculator",

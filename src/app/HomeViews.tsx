@@ -94,6 +94,13 @@ export function HomeDashboard({
                         Power rankings
                       </Link>
                       <Link
+                        href={`/leagues/${league.id}?view=find`}
+                        className="flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                      >
+                        <ToolIcon tool="finder" className="h-4 w-4" />
+                        Trade finder
+                      </Link>
+                      <Link
                         href={`/leagues/${league.id}?view=trade`}
                         className="flex items-center gap-1 font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                       >
@@ -238,7 +245,7 @@ export function LandingPage() {
             <h2 id={`group-${group}`} className="mb-4 text-lg font-semibold text-black dark:text-zinc-50">
               {GROUP_LABELS[group]}
             </h2>
-            <div className={`grid gap-4 sm:grid-cols-2 ${group === "season" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-4`}>
               {SITE_TOOLS.filter((t) => t.group === group).map((t) =>
                 t.guestHref ? (
                   <ToolCard key={t.key} tool={t} href={t.guestHref} cta={t.key === "extension" ? t.cta : "Try it now"} />

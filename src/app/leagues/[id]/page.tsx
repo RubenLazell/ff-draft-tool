@@ -21,7 +21,7 @@ export default async function LeagueDetailPage({
   const { id } = await params;
   const { data: savedLeague } = await supabase
     .from("user_leagues")
-    .select("id, platform, league_id, league_name, season, espn_swid, espn_s2")
+    .select("id, platform, league_id, league_name, season, espn_swid, espn_s2, my_roster_id")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -67,7 +67,8 @@ export default async function LeagueDetailPage({
       format={format}
       formats={FORMATS}
       formatLabels={FORMAT_LABELS}
-      initialView={view === "trade" ? "trade" : "rankings"}
+      initialView={view === "trade" ? "trade" : view === "find" ? "find" : "rankings"}
+      myRosterId={savedLeague.my_roster_id ?? null}
     />
   );
 }

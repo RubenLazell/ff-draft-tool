@@ -8,7 +8,8 @@ import { UNRANKED_SLOT_TYPES } from "@/lib/leagueScoring";
 import { ESPN_UNMATCHED_PREFIX } from "@/lib/espnMatching";
 import { POSITION_ORDER, POSITION_COLORS, FALLBACK_POSITION_COLOR } from "@/lib/playerDisplay";
 import { GuestBanner } from "@/app/rankings/GuestBanner";
-import { TradeCalculator } from "../TradeCalculator";
+import { TradeCalculator, type TradePreset } from "../TradeCalculator";
+import { TradeFinder } from "../TradeFinder";
 
 function positionColor(position: string) {
   return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
@@ -18,6 +19,14 @@ function positionColor(position: string) {
 // switch navigates via Link to /leagues/[id]?format=), or a guest's
 // stateless preview (onFormatChange, format switch re-runs the preview
 // action with nothing to navigate to — see /leagues/guest).
+type View = "rankings" | "trade" | "find";
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: "rankings", label: "Power rankings" },
+  { id: "find", label: "Trade finder" },
+  { id: "trade", label: "Trade calculator" },
+];
+
 type LeagueDetailViewProps = {
   leagueName: string;
   results: TeamResult[];
@@ -26,9 +35,12 @@ type LeagueDetailViewProps = {
   format: Format;
   formats: readonly Format[];
   formatLabels: Record<Format, string>;
-  // Deep link straight into the trade calculator (/leagues/[id]?view=trade)
-  // rather than making people find the toggle on the rankings view.
-  initialView?: "rankings" | "trade";
+  // Deep link straight into a view (/leagues/[id]?view=trade or ?view=find)
+  // rather than making people find the switch on the rankings view.
+  initialView?: View;
+  // The signed-in user's own team in this league, if they've set it.
+  // Null for guests or before it's set; the trade finder then asks.
+  myRosterId?: number | null;
 } & (
   | { leagueRowId: string; guestMode?: false; onFormatChange?: undefined; onReset?: undefined }
   | { leagueRowId?: undefined; guestMode: true; onFormatChange: (format: Format) => void; onReset: () => void }
@@ -37,12 +49,15 @@ type LeagueDetailViewProps = {
 export function LeagueDetailView(props: LeagueDetailViewProps) {
   const { leagueName, results, rankings, league, format, formats, formatLabels, guestMode } = props;
   const [expandedRosterId, setExpandedRosterId] = useState<number | null>(null);
-  const [showTrade, setShowTrade] = useState(props.initialView === "trade");
+  const [view, setView] = useState<View>(props.initialView ?? "rankings");
+  // A deal opened from the trade finder, pre-filled into the calculator.
+  // Bumping the key remounts the calculator so it picks the preset up.
+  const [tradePreset, setTradePreset] = useState<{ key: number; trade: TradePreset } | null>(null);
   const maxScore = Math.max(1, ...results.map((t) => t.score));
 
   return (
     <div className="flex flex-1 flex-col bg-zinc-50 px-2 py-4 sm:px-4 sm:py-8 dark:bg-black">
-      <div className={`mx-auto w-full ${showTrade ? "max-w-5xl" : "max-w-2xl"}`}>
+      <div className={`mx-auto w-full ${view === "trade" ? "max-w-5xl" : view === "find" ? "max-w-3xl" : "max-w-2xl"}`}>
         {guestMode && <GuestBanner />}
         {guestMode ? (
           <button
@@ -87,7 +102,7 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
             ) : (
               <Link
                 key={f}
-                href={`/leagues/${props.leagueRowId}?format=${f}${showTrade ? "&view=trade" : ""}`}
+                href={`/leagues/${props.leagueRowId}?format=${f}${view !== "rankings" ? `&view=${view}` : ""}`}
                 aria-current={format === f ? "page" : undefined}
                 className={`rounded-full border px-3 py-1 text-sm font-medium transition-colors ${
                   format === f
@@ -106,17 +121,14 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
           aria-label="View"
           className="mb-4 inline-flex rounded-full border border-black/[.08] bg-white p-1 dark:border-white/[.145] dark:bg-zinc-950"
         >
-          {[
-            { trade: false, label: "Power rankings" },
-            { trade: true, label: "Trade calculator" },
-          ].map((v) => (
+          {VIEWS.map((v) => (
             <button
-              key={v.label}
+              key={v.id}
               type="button"
-              aria-pressed={showTrade === v.trade}
-              onClick={() => setShowTrade(v.trade)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                showTrade === v.trade
+              aria-pressed={view === v.id}
+              onClick={() => setView(v.id)}
+              className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors sm:px-4 ${
+                view === v.id
                   ? "bg-emerald-700 text-white"
                   : "text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50"
               }`}
@@ -126,8 +138,26 @@ export function LeagueDetailView(props: LeagueDetailViewProps) {
           ))}
         </div>
 
-        {showTrade ? (
-          <TradeCalculator results={results} rankings={rankings} league={league} />
+        {view === "find" ? (
+          <TradeFinder
+            results={results}
+            rankings={rankings}
+            league={league}
+            myRosterId={props.myRosterId ?? null}
+            onOpenInCalculator={(trade) => {
+              setTradePreset((prev) => ({ key: (prev?.key ?? 0) + 1, trade }));
+              setView("trade");
+              window.scrollTo({ top: 0 });
+            }}
+          />
+        ) : view === "trade" ? (
+          <TradeCalculator
+            key={tradePreset?.key ?? 0}
+            results={results}
+            rankings={rankings}
+            league={league}
+            initialTrade={tradePreset?.trade}
+          />
         ) : (
           <>
             <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-zinc-500 dark:text-zinc-400">

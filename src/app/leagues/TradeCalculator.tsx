@@ -16,7 +16,7 @@ function positionColor(position: string) {
   return POSITION_COLORS[position as keyof typeof POSITION_COLORS] ?? FALLBACK_POSITION_COLOR;
 }
 
-function fullRoster(team: TeamResult): PositionRanked[] {
+export function fullRoster(team: TeamResult): PositionRanked[] {
   const starters = team.lineup.starters.map((s) => s.player).filter((p): p is PositionRanked => p != null);
   return [...starters, ...team.lineup.bench];
 }
@@ -40,19 +40,24 @@ function formatDelta(delta: number): string {
   return delta > 0 ? `+${rounded}` : rounded;
 }
 
+export type TradePreset = { teamAId: number; teamBId: number; awayFromA: string[]; awayFromB: string[] };
+
 export function TradeCalculator({
   results,
   rankings,
   league,
+  initialTrade,
 }: {
   results: TeamResult[];
   rankings: RankedPlayer[];
   league: { rosterPositions: string[]; totalRosters: number };
+  // Pre-filled trade, e.g. a deal opened from the trade finder.
+  initialTrade?: TradePreset | null;
 }) {
-  const [teamAId, setTeamAId] = useState<number | null>(null);
-  const [teamBId, setTeamBId] = useState<number | null>(null);
-  const [awayFromA, setAwayFromA] = useState<Set<string>>(new Set());
-  const [awayFromB, setAwayFromB] = useState<Set<string>>(new Set());
+  const [teamAId, setTeamAId] = useState<number | null>(initialTrade?.teamAId ?? null);
+  const [teamBId, setTeamBId] = useState<number | null>(initialTrade?.teamBId ?? null);
+  const [awayFromA, setAwayFromA] = useState<Set<string>>(() => new Set(initialTrade?.awayFromA));
+  const [awayFromB, setAwayFromB] = useState<Set<string>>(() => new Set(initialTrade?.awayFromB));
 
   const teamA = results.find((t) => t.rosterId === teamAId) ?? null;
   const teamB = results.find((t) => t.rosterId === teamBId) ?? null;

@@ -7,6 +7,8 @@ const PATHS: Record<string, string> = {
   matchups: "M3 12h4l3-8 4 16 3-8h4",
   // trophy
   leagues: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4ZM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3",
+  // magnifying glass
+  finder: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-5-5",
   // swap arrows
   trade: "M7 7h13l-4-4M17 17H4l4 4",
   // ordered list

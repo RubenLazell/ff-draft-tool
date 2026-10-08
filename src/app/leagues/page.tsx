@@ -92,6 +92,12 @@ export default async function LeaguesPage() {
                     Power rankings
                   </Link>
                   <Link
+                    href={`/leagues/${league.id}?view=find`}
+                    className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                  >
+                    Trade finder
+                  </Link>
+                  <Link
                     href={`/leagues/${league.id}?view=trade`}
                     className="font-medium text-emerald-700 hover:underline dark:text-emerald-400"
                   >

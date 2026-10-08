@@ -112,8 +112,8 @@ export function NavLinks({ signedIn }: { signedIn: boolean }) {
                 <ul className="flex flex-col">
                   {SITE_TOOLS.filter((t) => t.group === group).map((tool) => {
                     const href = hrefFor(tool, signedIn);
-                    // Trades shares Leagues' href, so only Leagues lights up.
-                    const isCurrent = tool.key !== "trade" && href === mobileCurrent;
+                    // Trade tools share Leagues' href, so only Leagues lights up.
+                    const isCurrent = tool.key !== "trade" && tool.key !== "finder" && href === mobileCurrent;
                     const locked = !signedIn && tool.guestHref === null;
                     return (
                       <li key={tool.key}>
